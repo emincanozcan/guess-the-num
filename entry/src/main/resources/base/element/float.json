@@ -1,0 +1,53 @@
+{
+  "float": [
+    {
+      "name": "page_text_font_size",
+      "value": "18fp"
+    },
+    {
+      "name": "button_font_size",
+      "value": "24fp"
+    },
+    {
+      "name": "play_again_font_size",
+      "value": "12fp"
+    },
+    {
+      "name": "question_mark_font_size",
+      "value": "48fp"
+    },
+    {
+      "name": "text_padding",
+      "value": "16fp"
+    },
+    {
+      "name": "button_padding",
+      "value": "10fp"
+    },
+    {
+      "name": "small_padding",
+      "value": "8fp"
+    },
+    {
+      "name": "button_margin",
+      "value": "8fp"
+    },
+    {
+      "name": "play_again_margin",
+      "value": "16fp"
+    },
+    {
+      "name": "small_margin",
+      "value": "8fp"
+    },
+    {
+      "name": "button_border_radius",
+      "value": "16fp"
+    },
+    {
+      "name": "play_again_border_radius",
+      "value": "12fp"
+    }
+  ]
+}
+

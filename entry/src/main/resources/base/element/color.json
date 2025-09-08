@@ -1,0 +1,20 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "gradient_start",
+      "value": "#fff0f5"
+    },
+    {
+      "name": "gradient_middle",
+      "value": "#ffe6f0"
+    },
+    {
+      "name": "gradient_end",
+      "value": "#ffd9e6"
+    }
+  ]
+}
