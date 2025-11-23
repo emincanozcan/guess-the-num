@@ -1,6 +1,6 @@
-import CommonConstants from "../constants/CommonConstants";
+import CommonConstants from '../constants/CommonConstants';
 
-// GlobalDataStore class manages global game data such as user lives and game over state
+// GlobalDataStore manages global game data such as user lives and game over state
 class GlobalDataStore {
   // A message string that can be used throughout the game
   message: string = '';
@@ -33,4 +33,4 @@ class GlobalDataStore {
 }
 
 // Export a single instance of GlobalDataStore for global use
-export const GlobalMessageStore = new GlobalDataStore();
+export const globalMessageStore = new GlobalDataStore();

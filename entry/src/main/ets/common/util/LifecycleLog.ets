@@ -1,6 +1,6 @@
-import CommonConstants from "../constants/CommonConstants";
+import CommonConstants from '../constants/CommonConstants';
 
-// LifecycleLog class manages a simple in-memory log system
+// LifecycleLog manages a simple in-memory log system
 export default class LifecycleLog {
 
   // Static array to store log messages
