@@ -24,7 +24,7 @@ export default class EntryAbility extends UIAbility {
     // Load the main page
     windowStage.loadContent('pages/Index', (err, data) => {
       if (err) {
-        hilog.error(DOMAIN, TAG, 'loadContent failed: ' + JSON.stringify(err));
+        hilog.error(DOMAIN, TAG, `loadContent failed: ${JSON.stringify(err)}`);
       }
     });
 

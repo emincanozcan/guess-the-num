@@ -24,7 +24,6 @@ This project demonstrates lifecycle event handling, state management, and user i
 
 
 # Technology
-
 ## Stack
 - **Languages**: ArkTS, ArkUI
 - **Frameworks**: HarmonyOS SDK 5.0.2(14)

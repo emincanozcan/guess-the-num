@@ -188,7 +188,7 @@ struct QuestionMark {
       .rotate({ angle: this.rotateAngle })
       .animation({
         curve: Curve.Linear,
-        playMode: PlayMode.Normal,
+        playMode: PlayMode.Normal
       })
   }
 }
