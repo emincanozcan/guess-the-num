@@ -15,6 +15,26 @@
     {
       "name": "gradient_end",
       "value": "#ffd9e6"
+    },
+    {
+      "name": "page_background",
+      "value": "#FFF7FB"
+    },
+    {
+      "name": "card_background",
+      "value": "#F2F4F7"
+    },
+    {
+      "name": "accent_positive",
+      "value": "#1F8A4D"
+    },
+    {
+      "name": "accent_negative",
+      "value": "#C62828"
+    },
+    {
+      "name": "accent_primary",
+      "value": "#2050D0"
     }
   ]
 }

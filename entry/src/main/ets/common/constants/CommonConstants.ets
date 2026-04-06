@@ -2,6 +2,10 @@ export default class CommonConstants {
   // Game-related constants
   // Default user lives
   static DEFAULT_LIVES: number = 3;
+  static DEFAULT_GAME_MODE: string = 'classic';
+  static DEFAULT_ROUND_DELAY_MS: number = 1000;
+  static DEFAULT_TIMED_LIMIT_MS: number = 30000;
+  static DEFAULT_STREAK_TARGET: number = 5;
   // Maximum number of logs to keep
   static MAX_LOGS: number = 20;
   // Default game over message

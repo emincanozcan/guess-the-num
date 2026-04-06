@@ -2,9 +2,9 @@
 
 # Guess the Num Game
 
-**Guess the Num Game** is a lightweight HarmonyOS wearable app that combines UI lifecycle logging with a simple interactive number guessing game. Users try to guess a secret number from two options while managing a limited number of lives. The app also tracks UI lifecycle events and logs them for debugging and educational purposes.
+**Guess the Num Game** is a HarmonyOS wearable number guessing game designed for small circular screens. It includes classic, timed, and streak-based play modes, quick resume for active sessions, lifecycle logs, history and stats views, configurable background behavior, and durable state persistence across app restarts.
 
-This project demonstrates lifecycle event handling, state management, and user interaction on HarmonyOS wearable devices.
+This project demonstrates lifecycle event handling, state management, wearable-friendly navigation, backup/restore support, and user interaction on HarmonyOS wearable devices.
 
 # Preview
 
@@ -16,11 +16,12 @@ This project demonstrates lifecycle event handling, state management, and user i
 
 # Use Cases
 
-- **UI Lifecycle Logging**: Tracks key lifecycle events (`onCreate`, `onWindowStageCreate`, visibility changes) with detailed messages.
-- **Number Guessing Game**: Guess the secret number from two choices, with limited lives and game-over conditions.
-- **State Persistence**: Lives and game-over state are stored and linked with storage for session consistency.
-- **User Feedback**: Displays remaining lives, correct/wrong guesses, and game over messages.
-- **Simple and Responsive UI**: Designed for small screens like smartwatches.
+- **UI Lifecycle Logging**: Tracks key lifecycle events and surfaces them through a dedicated logs screen.
+- **Number Guessing Game**: Play classic, timed, and streak-based rounds with quick resume for classic sessions.
+- **State Persistence**: Profile, history, stats, settings, and session progress are stored durably across app restarts.
+- **User Feedback**: Displays lives, score, streaks, results, achievements, and lifecycle status updates.
+- **Simple and Responsive UI**: Designed for small circular wearable screens with compact controls and readable cards.
+- **Backup and Restore**: Uses the backup extension to serialize and restore repository-backed app data.
 
 
 # Technology
@@ -29,7 +30,9 @@ This project demonstrates lifecycle event handling, state management, and user i
 - **Frameworks**: HarmonyOS SDK 5.0.2(14)
 - **Tools**: DevEco Studio Version 5.1.0.828
 - **Libraries**:
+  - `@kit.AbilityKit`
   - `@kit.ArkUI`
+  - `@kit.CoreFileKit`
   - `@kit.PerformanceAnalysisKit`
 
 ## Required Permissions
@@ -44,6 +47,8 @@ Guess the Num Game
 | | | |--- GlobalDataStorage.ets
 | | | |--- LifecycleLog.ets
 | |
+| |--- data/
+| |--- game/
 | |--- pages/
 | | |--- Index.ets
 | |
@@ -60,7 +65,3 @@ Guess the Num Game
 
 **Guess the Num Game** is distributed under the terms of the MIT License
 See the [LICENSE](./LICENSE) for more information.
-
-
-
-

@@ -1,37 +1,43 @@
 import CommonConstants from '../constants/CommonConstants';
+import { gameRepository } from '../../data/GameRepository';
+import { LifecycleEntry } from '../../data/models/GameRepositoryTypes';
 
-// LifecycleLog manages a simple in-memory log system
 export default class LifecycleLog {
+  static logs: LifecycleEntry[] = [];
 
-  // Static array to store log messages
-  static logs: string[] = [];
-
-  // Adds a new log message to the logs array
-  // Keeps only the last 20 messages
-  static add(message: string) {
-    LifecycleLog.logs.push(`${message}`);
-
-    // Keep only the last MAX_LOGS messages
+  static add(stage: string, message: string) {
+    if (LifecycleLog.logs.length === 0) {
+      LifecycleLog.logs = gameRepository.getLifecycleEntries().slice(-CommonConstants.MAX_LOGS);
+    }
+    const entry: LifecycleEntry = {
+      capturedAt: new Date().getTime(),
+      stage,
+      message
+    };
+    LifecycleLog.logs.push(entry);
     if (LifecycleLog.logs.length > CommonConstants.MAX_LOGS) {
       LifecycleLog.logs.shift();
     }
+    gameRepository.saveLifecycleSnapshot(LifecycleLog.logs);
   }
 
-  // Returns all log messages
-  static getAll(): string[] {
+  static getAll(): LifecycleEntry[] {
+    if (LifecycleLog.logs.length === 0) {
+      const entries = gameRepository.getLifecycleEntries();
+      if (entries.length > 0) {
+        LifecycleLog.logs = entries.slice(-CommonConstants.MAX_LOGS);
+      }
+    }
     return LifecycleLog.logs;
   }
 
-  // Returns the last log message, or a default message if no logs exist
   static getLast(): string {
-    if (LifecycleLog.logs.length === 0) {
-      return 'No logs.';
-    }
-    return LifecycleLog.logs[LifecycleLog.logs.length - 1];
+    const last = LifecycleLog.getAll()[LifecycleLog.getAll().length - 1];
+    return last ? `${last.stage}: ${last.message}` : 'No logs.';
   }
 
-  // Clears all logs
   static clear() {
     LifecycleLog.logs = [];
+    gameRepository.saveLifecycleSnapshot(LifecycleLog.logs);
   }
 }

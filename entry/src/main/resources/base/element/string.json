@@ -2,15 +2,39 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "Wearable number guessing game module"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "Guess the Num wearable experience"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "Guess the Num"
+    },
+    {
+      "name": "home_title",
+      "value": "Dashboard"
+    },
+    {
+      "name": "game_title",
+      "value": "Game"
+    },
+    {
+      "name": "settings_title",
+      "value": "Settings"
+    },
+    {
+      "name": "logs_title",
+      "value": "Lifecycle Logs"
+    },
+    {
+      "name": "stats_title",
+      "value": "Stats"
+    },
+    {
+      "name": "history_title",
+      "value": "History"
     }
   ]
 }
