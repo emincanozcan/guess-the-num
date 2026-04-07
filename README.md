@@ -9,9 +9,9 @@ This project demonstrates lifecycle event handling, state management, wearable-f
 # Preview
 
 <div>
-  <img src="screenshots/output.gif" width="24%">
-  <img src="screenshots/output1.png" width="24%">
-  <img src="screenshots/output2.png" width="24%">
+  <img src="screenshots/screenshot_1.png" width="25%">
+  <img src="screenshots/screenshot_2.png" width="25%">
+  <img src="screenshots/screenshot_3.png" width="25%">
 </div>
 
 # Use Cases
