@@ -1,9 +1,29 @@
 import CommonConstants from '../common/constants/CommonConstants';
-import { fileIo } from '@kit.CoreFileKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { GameMode } from '../game/models/GameMode';
 import { GameResult, GameResultReason } from '../game/models/GameResult';
 import { GameSessionState } from '../game/models/GameSessionState';
+import {
+  computeAchievementProgress,
+  computeAchievementUnlocked,
+  copyLifecycleEntries,
+  copySettings,
+  copyStats,
+  createAchievement,
+  createDefaultAchievements,
+  createDefaultStats,
+  createHistoryEntry,
+  createLifecycleEntry,
+  createSettings,
+  createStats,
+  sanitizeCount,
+  sanitizeHour,
+  sanitizeLives,
+  sanitizeMinute,
+  sanitizeReminderStatus,
+  sanitizeReminderToken
+} from './GameRepositoryHelpers';
+import { readDurableState, tryParseDurableState, writeDurableState } from './GameRepositoryStorage';
 import {
   AchievementProgress,
   BackgroundPolicy,
@@ -122,7 +142,7 @@ export class GameRepository {
   }
 
   getStats(): PlayerStats {
-    return this.copyStats(this.getProfile().stats);
+    return copyStats(this.getProfile().stats);
   }
 
   isOnboardingCompleted(): boolean {
@@ -266,7 +286,7 @@ export class GameRepository {
   }
 
   getSettings(): GameSettings {
-    return this.copySettings(this.readState().settings);
+    return copySettings(this.readState().settings);
   }
 
   getLifecycleBanner(): string {
@@ -344,7 +364,7 @@ export class GameRepository {
     const state = this.readState();
     state.settings = this.mergeSettings(state.settings, updates);
     this.writeState(state);
-    return this.copySettings(state.settings);
+    return copySettings(state.settings);
   }
 
   saveLifecycleSnapshot(entries: LifecycleEntry[]): void {
@@ -369,7 +389,7 @@ export class GameRepository {
     if (snapshots.length === 0) {
       return [];
     }
-    return this.copyLifecycleEntries(snapshots[snapshots.length - 1].entries);
+    return copyLifecycleEntries(snapshots[snapshots.length - 1].entries);
   }
 
   exportForBackup(): GameRepositoryBackupPayload {
@@ -448,33 +468,8 @@ export class GameRepository {
     return this.readState().profile;
   }
 
-  private copyStats(stats: PlayerStats): PlayerStats {
-    return this.createStats(stats.totalSessions, stats.completedSessions, stats.totalCorrect, stats.totalWrong,
-      stats.bestScore, stats.bestStreak, stats.longestRun, stats.longestStreak, stats.bestTimedScore,
-      stats.backgroundPenalties, stats.backgroundLosses, stats.lastPlayedAt);
-  }
-
-  private copySettings(settings: GameSettings): GameSettings {
-    return this.createSettings(settings.backgroundPenaltyEnabled, settings.backgroundPolicy, settings.timedBackgroundPolicy,
-      settings.preferredMode, settings.keepLifecycleSnapshots, settings.hapticsEnabled, settings.dailyReminderEnabled,
-      settings.dailyReminderHour, settings.dailyReminderMinute, settings.dailyReminderStatus,
-      settings.dailyReminderToken, settings.dailyReminderUpdatedAt);
-  }
-
-  private createLifecycleEntry(capturedAt: number, stage: string, message: string): LifecycleEntry {
-    return { capturedAt: capturedAt, stage: stage, message: message };
-  }
-
-  private copyLifecycleEntries(entries: LifecycleEntry[]): LifecycleEntry[] {
-    const copies: LifecycleEntry[] = [];
-    for (const entry of entries) {
-      copies.push(this.createLifecycleEntry(entry.capturedAt, entry.stage, entry.message));
-    }
-    return copies;
-  }
-
   private createLifecycleSnapshot(entries: LifecycleEntry[]): LifecycleSnapshot {
-    return { capturedAt: this.now(), entries: this.copyLifecycleEntries(entries) };
+    return { capturedAt: this.now(), entries: copyLifecycleEntries(entries) };
   }
 
   private createBackupState(state: DurableGameRepositoryState): DurableBackupRepositoryState {
@@ -485,7 +480,7 @@ export class GameRepository {
         gameOver: state.profile.gameOver,
         classicSessionActive: state.profile.classicSessionActive,
         onboardingCompleted: state.profile.onboardingCompleted,
-        stats: this.copyStats(state.profile.stats),
+        stats: copyStats(state.profile.stats),
         lastSession: this.normalizeSessionSnapshot(state.profile.lastSession, state.profile.lives, state.profile.gameOver),
         lastCompletedSession: this.normalizeCompletedSessionSummary(state.profile.lastCompletedSession)
       },
@@ -599,7 +594,7 @@ export class GameRepository {
     normalized.profile.lifecycleBanner = state?.profile?.lifecycleBanner ?? '';
     normalized.profile.pendingLifecycleBanner = state?.profile?.pendingLifecycleBanner ?? '';
     normalized.profile.timedSessionBackgroundStartedAt = this.sanitizeCount(state?.profile?.timedSessionBackgroundStartedAt);
-    normalized.profile.stats = this.createStats(
+    normalized.profile.stats = createStats(
       this.sanitizeCount(state?.profile?.stats?.totalSessions),
       this.sanitizeCount(state?.profile?.stats?.completedSessions),
       this.sanitizeCount(state?.profile?.stats?.totalCorrect),
@@ -641,7 +636,7 @@ export class GameRepository {
   }
 
   private mergeSettings(current: GameSettings, updates: GameSettingsUpdate): GameSettings {
-    return this.createSettings(
+    return createSettings(
       updates.backgroundPenaltyEnabled ?? current.backgroundPenaltyEnabled,
       updates.backgroundPolicy ?? current.backgroundPolicy,
       updates.timedBackgroundPolicy ?? current.timedBackgroundPolicy,
@@ -664,7 +659,7 @@ export class GameRepository {
     }
 
     for (const item of history) {
-      result.push(this.createHistoryEntry(
+      result.push(createHistoryEntry(
         item?.sessionId ?? this.makeSessionId(), item?.mode ?? GameMode.CLASSIC,
         item?.reason ?? GameResultReason.OUT_OF_LIVES, item?.summary ?? 'Saved session',
         this.sanitizeCount(item?.score), this.sanitizeLives(item?.livesRemaining ?? CommonConstants.DEFAULT_LIVES),
@@ -678,7 +673,7 @@ export class GameRepository {
   }
 
   private normalizeAchievements(achievements: AchievementProgress[] | undefined, stats: PlayerStats): AchievementProgress[] {
-    const defaults = this.createDefaultAchievements();
+    const defaults = createDefaultAchievements();
     if (!achievements || achievements.length === 0) {
       return this.applyAchievementProgress(defaults, stats);
     }
@@ -689,10 +684,10 @@ export class GameRepository {
   private applyAchievementProgress(achievements: AchievementProgress[], stats: PlayerStats): AchievementProgress[] {
     const normalized: AchievementProgress[] = [];
     for (const achievement of achievements) {
-      const unlocked = this.computeAchievementUnlocked(achievement.id, stats, achievement.unlocked);
-      normalized.push(this.createAchievement(
+      const unlocked = computeAchievementUnlocked(achievement.id, stats, achievement.unlocked);
+      normalized.push(createAchievement(
         achievement.id, achievement.title, achievement.description, unlocked,
-        this.computeAchievementProgress(achievement.id, stats), achievement.target,
+        computeAchievementProgress(achievement.id, stats), achievement.target,
         unlocked && achievement.unlockedAt === 0 ? this.now() : achievement.unlockedAt
       ));
     }
@@ -713,13 +708,13 @@ export class GameRepository {
 
   private normalizeLifecycleEntries(entries?: LifecycleEntry[], legacyMessages?: string[]): LifecycleEntry[] {
     if (entries && entries.length > 0) {
-      return this.copyLifecycleEntries(entries);
+      return copyLifecycleEntries(entries);
     }
 
     if (legacyMessages && legacyMessages.length > 0) {
       const legacyEntries: LifecycleEntry[] = [];
       for (const message of legacyMessages) {
-        legacyEntries.push(this.createLifecycleEntry(this.now(), 'Lifecycle', message));
+        legacyEntries.push(createLifecycleEntry(this.now(), 'Lifecycle', message));
       }
       return legacyEntries;
     }
@@ -916,40 +911,6 @@ export class GameRepository {
     }
   }
 
-  private computeAchievementUnlocked(id: string, stats: PlayerStats, currentUnlocked: boolean): boolean {
-    if (currentUnlocked) {
-      return true;
-    }
-
-    switch (id) {
-      case 'first-session':
-        return stats.totalSessions >= 1;
-      case 'steady-player':
-        return stats.completedSessions >= 3;
-      case 'streak-builder':
-        return stats.bestStreak >= 5;
-      case 'score-keeper':
-        return stats.bestScore >= 10;
-      default:
-        return currentUnlocked;
-    }
-  }
-
-  private computeAchievementProgress(id: string, stats: PlayerStats): number {
-    switch (id) {
-      case 'first-session':
-        return Math.min(stats.totalSessions, 1);
-      case 'steady-player':
-        return Math.min(stats.completedSessions, 3);
-      case 'streak-builder':
-        return Math.min(stats.bestStreak, 5);
-      case 'score-keeper':
-        return Math.min(stats.bestScore, 10);
-      default:
-        return 0;
-    }
-  }
-
   private createDefaultState(): DurableGameRepositoryState {
     return {
       schemaVersion: GameRepository.SCHEMA_VERSION,
@@ -961,7 +922,7 @@ export class GameRepository {
         lifecycleBanner: '',
         pendingLifecycleBanner: '',
         timedSessionBackgroundStartedAt: 0,
-        stats: this.createDefaultStats(),
+        stats: createDefaultStats(),
         lastSession: this.buildEmptySessionSnapshot(CommonConstants.DEFAULT_LIVES, false),
         lastCompletedSession: this.buildEmptyCompletedSessionSummary()
       },
@@ -980,233 +941,45 @@ export class GameRepository {
         dailyReminderUpdatedAt: 0
       },
       history: [],
-      achievements: this.createDefaultAchievements(),
+      achievements: createDefaultAchievements(),
       lifecycleSnapshots: []
     };
   }
 
-  private createSettings(backgroundPenaltyEnabled: boolean, backgroundPolicy: BackgroundPolicy,
-    timedBackgroundPolicy: TimedBackgroundPolicy, preferredMode: GameMode, keepLifecycleSnapshots: boolean,
-    hapticsEnabled: boolean, dailyReminderEnabled: boolean, dailyReminderHour: number, dailyReminderMinute: number,
-    dailyReminderStatus: ReminderScheduleStatus, dailyReminderToken: string, dailyReminderUpdatedAt: number): GameSettings {
-    return {
-      backgroundPenaltyEnabled: backgroundPenaltyEnabled,
-      backgroundPolicy: backgroundPolicy,
-      timedBackgroundPolicy: timedBackgroundPolicy,
-      preferredMode: preferredMode,
-      keepLifecycleSnapshots: keepLifecycleSnapshots,
-      hapticsEnabled: hapticsEnabled,
-      dailyReminderEnabled: dailyReminderEnabled,
-      dailyReminderHour: this.sanitizeHour(dailyReminderHour),
-      dailyReminderMinute: this.sanitizeMinute(dailyReminderMinute),
-      dailyReminderStatus: this.sanitizeReminderStatus(dailyReminderStatus),
-      dailyReminderToken: this.sanitizeReminderToken(dailyReminderToken),
-      dailyReminderUpdatedAt: this.sanitizeCount(dailyReminderUpdatedAt)
-    };
-  }
-
-  private createStats(totalSessions: number, completedSessions: number, totalCorrect: number, totalWrong: number,
-    bestScore: number, bestStreak: number, longestRun: number, longestStreak: number, bestTimedScore: number,
-    backgroundPenalties: number, backgroundLosses: number, lastPlayedAt: number): PlayerStats {
-    return {
-      totalSessions: totalSessions,
-      completedSessions: completedSessions,
-      totalCorrect: totalCorrect,
-      totalWrong: totalWrong,
-      bestScore: bestScore,
-      bestStreak: bestStreak,
-      longestRun: longestRun,
-      longestStreak: longestStreak,
-      bestTimedScore: bestTimedScore,
-      backgroundPenalties: backgroundPenalties,
-      backgroundLosses: backgroundLosses,
-      lastPlayedAt: lastPlayedAt
-    };
-  }
-
-  private createAchievement(id: string, title: string, description: string, unlocked: boolean,
-    progress: number, target: number, unlockedAt: number): AchievementProgress {
-    return {
-      id: id,
-      title: title,
-      description: description,
-      unlocked: unlocked,
-      progress: progress,
-      target: target,
-      unlockedAt: unlockedAt
-    };
-  }
-
-  private createHistoryEntry(sessionId: string, mode: GameMode, reason: string, summary: string, score: number,
-    livesRemaining: number, correctCount: number, wrongCount: number, bestStreak: number,
-    completedRounds: number, completedAt: number): SessionHistoryEntry {
-    return {
-      sessionId: sessionId,
-      mode: mode,
-      reason: reason,
-      summary: summary,
-      score: score,
-      livesRemaining: livesRemaining,
-      correctCount: correctCount,
-      wrongCount: wrongCount,
-      bestStreak: bestStreak,
-      completedRounds: completedRounds,
-      completedAt: completedAt
-    };
-  }
-
-  private createDefaultStats(): PlayerStats {
-    return this.createStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  }
-
-  private createDefaultAchievements(): AchievementProgress[] {
-    return [
-      this.createAchievement('first-session', 'First Session', 'Complete your first recorded session.', false, 0, 1, 0),
-      this.createAchievement('steady-player', 'Steady Player', 'Complete three sessions.', false, 0, 3, 0),
-      this.createAchievement('streak-builder', 'Streak Builder', 'Reach a best streak of five.', false, 0, 5, 0),
-      this.createAchievement('score-keeper', 'Score Keeper', 'Reach a score of ten.', false, 0, 10, 0)
-    ];
-  }
-
   private tryParseState(rawState: string | undefined): DurableGameRepositoryState | undefined {
-    if (!rawState) {
-      hilog.info(DOMAIN, TAG, 'tryParseState skipped: empty raw state');
-      return undefined;
-    }
-
-    try {
-      const parsed = JSON.parse(rawState) as DurableGameRepositoryState;
-      hilog.info(DOMAIN, TAG, 'tryParseState success bytes=%{public}d', rawState.length);
-      return parsed;
-    } catch (error) {
-      hilog.warn(DOMAIN, TAG, 'tryParseState failed %{public}s', JSON.stringify(error));
-      return undefined;
-    }
+    return tryParseDurableState<DurableGameRepositoryState>(rawState, DOMAIN, TAG);
   }
 
   private readDurableState(): string {
-    if (!this.storageFilePath) {
-      hilog.info(DOMAIN, TAG, 'readDurableState no file path, falling back to AppStorage');
-      return AppStorage.get<string>(DEFAULT_STATE_KEY) ?? '';
-    }
-
-    try {
-      fileIo.accessSync(this.storageFilePath);
-    } catch (error) {
-      hilog.info(DOMAIN, TAG, 'readDurableState file missing/unavailable %{public}s error=%{public}s',
-        this.storageFilePath, JSON.stringify(error));
-      return AppStorage.get<string>(DEFAULT_STATE_KEY) ?? '';
-    }
-
-    try {
-      const stat = fileIo.statSync(this.storageFilePath);
-      const size = stat.size ?? 0;
-      if (size <= 0) {
-        hilog.info(DOMAIN, TAG, 'readDurableState file empty %{public}s', this.storageFilePath);
-        return '';
-      }
-
-      const file = fileIo.openSync(this.storageFilePath, fileIo.OpenMode.READ_ONLY);
-      try {
-        const buffer = new ArrayBuffer(size);
-        const readBytes = fileIo.readSync(file.fd, buffer);
-        if (readBytes <= 0) {
-          return '';
-        }
-
-        let result = '';
-        const bytes = new Uint8Array(buffer);
-        let index = 0;
-        while (index < readBytes) {
-          result += String.fromCharCode(bytes[index]);
-          index += 1;
-        }
-        hilog.info(DOMAIN, TAG, 'readDurableState success path=%{public}s bytes=%{public}d', this.storageFilePath, readBytes);
-        return result;
-      } finally {
-        fileIo.closeSync(file);
-      }
-    } catch (error) {
-      hilog.warn(DOMAIN, TAG, 'readDurableState failed path=%{public}s error=%{public}s',
-        this.storageFilePath, JSON.stringify(error));
-      return AppStorage.get<string>(DEFAULT_STATE_KEY) ?? '';
-    }
+    return readDurableState(this.storageFilePath, DEFAULT_STATE_KEY, DOMAIN, TAG);
   }
 
   private writeDurableState(serializedState: string): void {
-    if (!this.storageFilePath) {
-      hilog.info(DOMAIN, TAG, 'writeDurableState skipped: no file path');
-      return;
-    }
-
-    try {
-      fileIo.accessSync(this.storageDir);
-    } catch (_error) {
-      try {
-        fileIo.mkdirSync(this.storageDir);
-        hilog.info(DOMAIN, TAG, 'writeDurableState created storage dir %{public}s', this.storageDir);
-      } catch (_mkdirError) {
-        hilog.warn(DOMAIN, TAG, 'writeDurableState failed to create dir %{public}s', this.storageDir);
-        return;
-      }
-    }
-
-    try {
-      const file = fileIo.openSync(this.storageFilePath,
-        fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
-      try {
-        fileIo.writeSync(file.fd, serializedState);
-        hilog.info(DOMAIN, TAG, 'writeDurableState success path=%{public}s bytes=%{public}d',
-          this.storageFilePath, serializedState.length);
-      } finally {
-        fileIo.closeSync(file);
-      }
-    } catch (error) {
-      hilog.warn(DOMAIN, TAG, 'writeDurableState failed path=%{public}s error=%{public}s',
-        this.storageFilePath, JSON.stringify(error));
-    }
+    writeDurableState(this.storageDir, this.storageFilePath, serializedState, DOMAIN, TAG);
   }
 
   private sanitizeLives(value: number | undefined): number {
-    if (value === undefined || value === null || Number.isNaN(value)) {
-      return CommonConstants.DEFAULT_LIVES;
-    }
-    return Math.max(0, Math.floor(value));
+    return sanitizeLives(value);
   }
 
   private sanitizeCount(value: number | undefined): number {
-    if (value === undefined || value === null || Number.isNaN(value)) {
-      return 0;
-    }
-    return Math.max(0, Math.floor(value));
+    return sanitizeCount(value);
   }
 
   private sanitizeHour(value: number): number {
-    if (value === undefined || value === null || Number.isNaN(value)) {
-      return 20;
-    }
-    return Math.max(0, Math.min(23, Math.floor(value)));
+    return sanitizeHour(value);
   }
 
   private sanitizeMinute(value: number): number {
-    if (value === undefined || value === null || Number.isNaN(value)) {
-      return 0;
-    }
-    return Math.max(0, Math.min(59, Math.floor(value)));
+    return sanitizeMinute(value);
   }
 
   private sanitizeReminderStatus(value: string): ReminderScheduleStatus {
-    if (value === 'scheduled' || value === 'cancelled' || value === 'unsupported' || value === 'failed') {
-      return value;
-    }
-    return 'idle';
+    return sanitizeReminderStatus(value);
   }
 
   private sanitizeReminderToken(value: string | undefined): string {
-    if (!value) {
-      return '';
-    }
-    return value;
+    return sanitizeReminderToken(value);
   }
 
   private makeSessionId(): string {
