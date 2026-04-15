@@ -1,36 +1,47 @@
 import PageRoutes from '../common/constants/PageRoutes';
+import AppNavigator from '../common/util/AppNavigator';
+import { Game } from './Game';
+import { History } from './History';
+import { Home } from './Home';
+import { Logs } from './Logs';
+import { Result } from './Result';
+import { Settings } from './Settings';
+import { Stats } from './Stats';
 
 @Entry
 @Component
 struct Index {
-  private hasRedirected: boolean = false;
+  private pathStack: NavPathStack = new NavPathStack();
 
-  onPageShow() {
-    if (this.hasRedirected) {
-      return;
-    }
-
-    this.hasRedirected = true;
-    void this.openHome();
+  aboutToAppear() {
+    AppNavigator.setPathStack(this.pathStack);
   }
 
-  private async openHome(): Promise<void> {
-    try {
-      await this.getUIContext().getRouter().replaceUrl({ url: PageRoutes.HOME });
-    } catch (_error) {
+  @Builder
+  private pageMap(name: string) {
+    if (name === PageRoutes.GAME) {
+      Game();
+    } else if (name === PageRoutes.RESULT) {
+      Result();
+    } else if (name === PageRoutes.STATS) {
+      Stats();
+    } else if (name === PageRoutes.HISTORY) {
+      History();
+    } else if (name === PageRoutes.LOGS) {
+      Logs();
+    } else if (name === PageRoutes.SETTINGS) {
+      Settings();
     }
   }
 
   build() {
-    Column() {
-      Text('Loading...')
-        .fontSize(18)
-        .fontWeight(FontWeight.Medium)
-        .textAlign(TextAlign.Center)
+    Navigation(this.pathStack) {
+      Home();
     }
+    .mode(NavigationMode.Stack)
+    .hideNavBar(true)
+    .navDestination(this.pageMap)
     .width('100%')
     .height('100%')
-    .alignItems(HorizontalAlign.Center)
-    .justifyContent(FlexAlign.Center)
   }
 }

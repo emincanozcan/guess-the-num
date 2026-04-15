@@ -1,11 +1,16 @@
 import PageRoutes from '../common/constants/PageRoutes';
+import AppNavigator from '../common/util/AppNavigator';
 import PageRouteTracker from '../common/util/PageRouteTracker';
 import { gameRepository } from '../data/GameRepository';
 import { GameMode } from '../game/models/GameMode';
 
-@Entry
+class GameNavigationParams {
+  mode: string = GameMode.CLASSIC;
+  resumeClassic: string = 'false';
+}
+
 @Component
-struct Home {
+export struct Home {
   @State welcomeText: string = 'Ready for a quick round?';
   @State profileText: string = 'New player';
   @State sessionText: string = 'No session yet';
@@ -30,22 +35,19 @@ struct Home {
     this.quickResumeText = this.quickResumeEnabled ? 'Resume classic session' : 'Resume classic session';
   }
 
-  private async open(route: string): Promise<void> {
-    try {
-      await this.getUIContext().getRouter().pushUrl({ url: route });
-    } catch (_error) {
-    }
+  private open(route: string): void {
+    AppNavigator.push(route);
   }
 
-  private async startMode(mode: GameMode, resumeClassic: boolean = false): Promise<void> {
-    try {
-      if (resumeClassic) {
-        await this.getUIContext().getRouter().pushUrl({ url: PageRoutes.GAME, params: { mode: mode, resumeClassic: 'true' } });
-        return;
-      }
-      await this.getUIContext().getRouter().pushUrl({ url: PageRoutes.GAME, params: { mode: mode } });
-    } catch (_error) {
+  private startMode(mode: GameMode, resumeClassic: boolean = false): void {
+    const params: GameNavigationParams = new GameNavigationParams();
+    params.mode = mode;
+    if (resumeClassic) {
+      params.resumeClassic = 'true';
+      AppNavigator.push(PageRoutes.GAME, params);
+      return;
     }
+    AppNavigator.push(PageRoutes.GAME, params);
   }
 
   build() {
@@ -88,7 +90,7 @@ struct Home {
             .backgroundColor(this.quickResumeEnabled ? '#E58A2B' : '#D8B89C')
             .borderRadius(18)
             .enabled(this.quickResumeEnabled)
-            .onClick(() => { void this.startMode(GameMode.CLASSIC, true); })
+            .onClick(() => { this.startMode(GameMode.CLASSIC, true); })
 
           Text('Challenges')
             .fontSize(15)
@@ -105,7 +107,7 @@ struct Home {
             .backgroundColor('#E58A2B')
             .borderRadius(17)
             .margin({ bottom: 8 })
-            .onClick(() => { void this.startMode(GameMode.CLASSIC); })
+            .onClick(() => { this.startMode(GameMode.CLASSIC); })
 
           Button('Timed')
             .width('100%')
@@ -115,7 +117,7 @@ struct Home {
             .backgroundColor('#D96C8B')
             .borderRadius(17)
             .margin({ bottom: 8 })
-            .onClick(() => { void this.startMode(GameMode.TIMED); })
+            .onClick(() => { this.startMode(GameMode.TIMED); })
 
           Button('Streak')
             .width('100%')
@@ -124,7 +126,7 @@ struct Home {
             .fontColor('#FFFFFF')
             .backgroundColor('#C84D7C')
             .borderRadius(17)
-            .onClick(() => { void this.startMode(GameMode.STREAK); })
+            .onClick(() => { this.startMode(GameMode.STREAK); })
 
           Column() {
             Button('Stats')
@@ -135,7 +137,7 @@ struct Home {
               .backgroundColor('#FFF7FB')
               .borderRadius(16)
               .margin({ top: 10 })
-              .onClick(() => { void this.open(PageRoutes.STATS); })
+              .onClick(() => { this.open(PageRoutes.STATS); })
 
             Button('History')
               .width('100%')
@@ -145,7 +147,7 @@ struct Home {
               .backgroundColor('#FFF7FB')
               .borderRadius(16)
               .margin({ top: 8 })
-              .onClick(() => { void this.open(PageRoutes.HISTORY); })
+              .onClick(() => { this.open(PageRoutes.HISTORY); })
           }
 
           Button('Settings')
@@ -156,7 +158,7 @@ struct Home {
             .backgroundColor('#FFF7FB')
             .borderRadius(16)
             .margin({ top: 8 })
-            .onClick(() => { void this.open(PageRoutes.SETTINGS); })
+            .onClick(() => { this.open(PageRoutes.SETTINGS); })
         }
         .width('100%')
         .alignItems(HorizontalAlign.Center)

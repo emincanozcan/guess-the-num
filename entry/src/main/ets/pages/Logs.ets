@@ -4,9 +4,8 @@ import PageRouteTracker from '../common/util/PageRouteTracker';
 import LifecycleLog from '../common/util/LifecycleLog';
 import { LifecycleEntry } from '../data/models/GameRepositoryTypes';
 
-@Entry
 @Component
-struct Logs {
+export struct Logs {
   @State entries: LifecycleEntry[] = [];
 
   onPageShow() {

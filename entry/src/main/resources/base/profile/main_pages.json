@@ -1,12 +1,5 @@
 {
   "src": [
-    "pages/Index",
-    "pages/Home",
-    "pages/Game",
-    "pages/Result",
-    "pages/Stats",
-    "pages/History",
-    "pages/Logs",
-    "pages/Settings"
+    "pages/Index"
   ]
 }

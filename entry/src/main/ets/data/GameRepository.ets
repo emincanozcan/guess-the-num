@@ -4,18 +4,11 @@ import { GameMode } from '../game/models/GameMode';
 import { GameResult, GameResultReason } from '../game/models/GameResult';
 import { GameSessionState } from '../game/models/GameSessionState';
 import {
-  computeAchievementProgress,
-  computeAchievementUnlocked,
   copyLifecycleEntries,
   copySettings,
   copyStats,
-  createAchievement,
-  createDefaultAchievements,
-  createDefaultStats,
   createHistoryEntry,
   createLifecycleEntry,
-  createSettings,
-  createStats,
   sanitizeCount,
   sanitizeHour,
   sanitizeLives,
@@ -23,10 +16,10 @@ import {
   sanitizeReminderStatus,
   sanitizeReminderToken
 } from './GameRepositoryHelpers';
+import { GameRepositoryStateSupport } from './GameRepositoryStateSupport';
 import { readDurableState, tryParseDurableState, writeDurableState } from './GameRepositoryStorage';
 import {
   AchievementProgress,
-  BackgroundPolicy,
   ClassicSessionSnapshot,
   DurableGameRepositoryState,
   DurableBackupRepositoryState,
@@ -49,8 +42,8 @@ const TIMED_SESSION_PAUSED_KEY = 'timedSessionBackgroundPaused';
 const TAG = 'GameRepository';
 const DOMAIN = 0x0000;
 
-export class GameRepository {
-  private static readonly SCHEMA_VERSION = 1;
+export class GameRepository extends GameRepositoryStateSupport {
+  static readonly SCHEMA_VERSION = GameRepositoryStateSupport.SCHEMA_VERSION;
   private static readonly MAX_HISTORY = CommonConstants.MAX_LOGS;
   private static readonly MAX_SNAPSHOTS = CommonConstants.MAX_LOGS;
 
@@ -554,207 +547,6 @@ export class GameRepository {
     return state;
   }
 
-  private shouldMigrateFromLegacy(state: DurableGameRepositoryState, legacyLives: number, legacyGameOver: boolean): boolean {
-    const rawStateLooksDefault = this.isDefaultRepositoryShape(state);
-    const legacyDiffersFromDefault = this.sanitizeLives(legacyLives) !== CommonConstants.DEFAULT_LIVES || legacyGameOver !== false;
-    return rawStateLooksDefault && legacyDiffersFromDefault;
-  }
-
-  private isDefaultRepositoryShape(state: DurableGameRepositoryState): boolean {
-    return state?.schemaVersion === GameRepository.SCHEMA_VERSION &&
-      this.sanitizeLives(state?.profile?.lives) === CommonConstants.DEFAULT_LIVES &&
-      (state?.profile?.gameOver ?? false) === false &&
-      (state?.profile?.classicSessionActive ?? false) === false &&
-      this.sanitizeCount(state?.profile?.stats?.totalSessions) === 0 &&
-      this.sanitizeCount(state?.profile?.stats?.completedSessions) === 0 &&
-      this.sanitizeCount(state?.profile?.stats?.totalCorrect) === 0 &&
-      this.sanitizeCount(state?.profile?.stats?.totalWrong) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.bestScore) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.bestStreak) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.longestRun) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.longestStreak) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.bestTimedScore) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.backgroundPenalties) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.backgroundLosses) === 0 &&
-       this.sanitizeCount(state?.profile?.stats?.lastPlayedAt) === 0 &&
-      this.sanitizeLives(state?.profile?.lastSession?.lives) === CommonConstants.DEFAULT_LIVES &&
-      (state?.profile?.lastSession?.gameOver ?? false) === false &&
-      this.sanitizeCount(state?.history?.length) === 0 &&
-      this.sanitizeCount(state?.lifecycleSnapshots?.length) === 0 &&
-      this.sanitizeCount(state?.achievements?.length) >= 0;
-  }
-
-  private normalizeState(state: DurableGameRepositoryState): DurableGameRepositoryState {
-    const normalized = this.createDefaultState();
-    normalized.schemaVersion = GameRepository.SCHEMA_VERSION;
-    normalized.profile.lives = this.sanitizeLives(state?.profile?.lives ?? CommonConstants.DEFAULT_LIVES);
-    normalized.profile.gameOver = state?.profile?.gameOver ?? false;
-    normalized.profile.classicSessionActive = state?.profile?.classicSessionActive ?? false;
-    normalized.profile.onboardingCompleted = state?.profile?.onboardingCompleted ?? false;
-    normalized.profile.lifecycleBanner = state?.profile?.lifecycleBanner ?? '';
-    normalized.profile.pendingLifecycleBanner = state?.profile?.pendingLifecycleBanner ?? '';
-    normalized.profile.timedSessionBackgroundStartedAt = this.sanitizeCount(state?.profile?.timedSessionBackgroundStartedAt);
-    normalized.profile.stats = createStats(
-      this.sanitizeCount(state?.profile?.stats?.totalSessions),
-      this.sanitizeCount(state?.profile?.stats?.completedSessions),
-      this.sanitizeCount(state?.profile?.stats?.totalCorrect),
-      this.sanitizeCount(state?.profile?.stats?.totalWrong),
-      this.sanitizeCount(state?.profile?.stats?.bestScore),
-      this.sanitizeCount(state?.profile?.stats?.bestStreak),
-      this.sanitizeCount(state?.profile?.stats?.longestRun),
-      this.sanitizeCount(state?.profile?.stats?.longestStreak ?? state?.profile?.stats?.bestStreak),
-      this.sanitizeCount(state?.profile?.stats?.bestTimedScore),
-      this.sanitizeCount(state?.profile?.stats?.backgroundPenalties),
-      this.sanitizeCount(state?.profile?.stats?.backgroundLosses),
-      this.sanitizeCount(state?.profile?.stats?.lastPlayedAt)
-    );
-    normalized.profile.lastSession = this.normalizeSessionSnapshot(state?.profile?.lastSession, normalized.profile.lives, normalized.profile.gameOver);
-    normalized.profile.lastCompletedSession = this.normalizeCompletedSessionSummary(state?.profile?.lastCompletedSession);
-    normalized.settings = this.normalizeSettings(state?.settings);
-    normalized.history = this.normalizeHistory(state?.history);
-    normalized.achievements = this.normalizeAchievements(state?.achievements, normalized.profile.stats);
-    normalized.lifecycleSnapshots = this.normalizeSnapshots(state?.lifecycleSnapshots);
-    return normalized;
-  }
-
-  private normalizeSettings(settings?: GameSettings): GameSettings {
-    const defaults = this.createDefaultState().settings;
-    return {
-      backgroundPenaltyEnabled: settings?.backgroundPenaltyEnabled ?? defaults.backgroundPenaltyEnabled,
-      backgroundPolicy: settings?.backgroundPolicy ?? defaults.backgroundPolicy,
-      timedBackgroundPolicy: settings?.timedBackgroundPolicy ?? defaults.timedBackgroundPolicy,
-      preferredMode: settings?.preferredMode ?? defaults.preferredMode,
-      keepLifecycleSnapshots: settings?.keepLifecycleSnapshots ?? defaults.keepLifecycleSnapshots,
-      hapticsEnabled: settings?.hapticsEnabled ?? defaults.hapticsEnabled,
-      dailyReminderEnabled: settings?.dailyReminderEnabled ?? defaults.dailyReminderEnabled,
-      dailyReminderHour: this.sanitizeHour(settings?.dailyReminderHour ?? defaults.dailyReminderHour),
-      dailyReminderMinute: this.sanitizeMinute(settings?.dailyReminderMinute ?? defaults.dailyReminderMinute),
-      dailyReminderStatus: this.sanitizeReminderStatus(settings?.dailyReminderStatus ?? defaults.dailyReminderStatus),
-      dailyReminderToken: this.sanitizeReminderToken(settings?.dailyReminderToken ?? defaults.dailyReminderToken),
-      dailyReminderUpdatedAt: this.sanitizeCount(settings?.dailyReminderUpdatedAt ?? defaults.dailyReminderUpdatedAt)
-    };
-  }
-
-  private mergeSettings(current: GameSettings, updates: GameSettingsUpdate): GameSettings {
-    return createSettings(
-      updates.backgroundPenaltyEnabled ?? current.backgroundPenaltyEnabled,
-      updates.backgroundPolicy ?? current.backgroundPolicy,
-      updates.timedBackgroundPolicy ?? current.timedBackgroundPolicy,
-      updates.preferredMode ?? current.preferredMode,
-      updates.keepLifecycleSnapshots ?? current.keepLifecycleSnapshots,
-      updates.hapticsEnabled ?? current.hapticsEnabled,
-      updates.dailyReminderEnabled ?? current.dailyReminderEnabled,
-      updates.dailyReminderHour ?? current.dailyReminderHour,
-      updates.dailyReminderMinute ?? current.dailyReminderMinute,
-      updates.dailyReminderStatus ?? current.dailyReminderStatus,
-      updates.dailyReminderToken ?? current.dailyReminderToken,
-      updates.dailyReminderUpdatedAt ?? current.dailyReminderUpdatedAt
-    );
-  }
-
-  private normalizeHistory(history?: SessionHistoryEntry[]): SessionHistoryEntry[] {
-    const result: SessionHistoryEntry[] = [];
-    if (!history) {
-      return result;
-    }
-
-    for (const item of history) {
-      result.push(createHistoryEntry(
-        item?.sessionId ?? this.makeSessionId(), item?.mode ?? GameMode.CLASSIC,
-        item?.reason ?? GameResultReason.OUT_OF_LIVES, item?.summary ?? 'Saved session',
-        this.sanitizeCount(item?.score), this.sanitizeLives(item?.livesRemaining ?? CommonConstants.DEFAULT_LIVES),
-        this.sanitizeCount(item?.correctCount), this.sanitizeCount(item?.wrongCount),
-        this.sanitizeCount(item?.bestStreak), this.sanitizeCount(item?.completedRounds),
-        this.sanitizeCount(item?.completedAt)
-      ));
-    }
-
-    return result;
-  }
-
-  private normalizeAchievements(achievements: AchievementProgress[] | undefined, stats: PlayerStats): AchievementProgress[] {
-    const defaults = createDefaultAchievements();
-    if (!achievements || achievements.length === 0) {
-      return this.applyAchievementProgress(defaults, stats);
-    }
-
-    return this.applyAchievementProgress(achievements, stats);
-  }
-
-  private applyAchievementProgress(achievements: AchievementProgress[], stats: PlayerStats): AchievementProgress[] {
-    const normalized: AchievementProgress[] = [];
-    for (const achievement of achievements) {
-      const unlocked = computeAchievementUnlocked(achievement.id, stats, achievement.unlocked);
-      normalized.push(createAchievement(
-        achievement.id, achievement.title, achievement.description, unlocked,
-        computeAchievementProgress(achievement.id, stats), achievement.target,
-        unlocked && achievement.unlockedAt === 0 ? this.now() : achievement.unlockedAt
-      ));
-    }
-    return normalized;
-  }
-
-  private normalizeSnapshots(snapshots?: LifecycleSnapshot[]): LifecycleSnapshot[] {
-    const result: LifecycleSnapshot[] = [];
-    if (!snapshots) {
-      return result;
-    }
-
-    for (const snapshot of snapshots) {
-      result.push({ capturedAt: this.sanitizeCount(snapshot?.capturedAt), entries: this.normalizeLifecycleEntries(snapshot?.entries, snapshot?.messages) });
-    }
-    return result;
-  }
-
-  private normalizeLifecycleEntries(entries?: LifecycleEntry[], legacyMessages?: string[]): LifecycleEntry[] {
-    if (entries && entries.length > 0) {
-      return copyLifecycleEntries(entries);
-    }
-
-    if (legacyMessages && legacyMessages.length > 0) {
-      const legacyEntries: LifecycleEntry[] = [];
-      for (const message of legacyMessages) {
-        legacyEntries.push(createLifecycleEntry(this.now(), 'Lifecycle', message));
-      }
-      return legacyEntries;
-    }
-
-    return [];
-  }
-
-  private normalizeSessionSnapshot(snapshot: ClassicSessionSnapshot | undefined, lives: number, gameOver: boolean): ClassicSessionSnapshot {
-    const message = this.normalizeProgressMessage(snapshot?.message ?? '', gameOver);
-    return {
-      mode: snapshot?.mode ?? GameMode.CLASSIC,
-      lives: this.sanitizeLives(snapshot?.lives ?? lives),
-      gameOver: snapshot?.gameOver ?? gameOver,
-      score: this.sanitizeCount(snapshot?.score),
-      streak: this.sanitizeCount(snapshot?.streak),
-      bestStreak: this.sanitizeCount(snapshot?.bestStreak),
-      correctCount: this.sanitizeCount(snapshot?.correctCount),
-      wrongCount: this.sanitizeCount(snapshot?.wrongCount),
-      completedRounds: this.sanitizeCount(snapshot?.completedRounds),
-      sequenceIndex: this.sanitizeCount(snapshot?.sequenceIndex),
-      turnIndex: this.sanitizeCount(snapshot?.turnIndex),
-      roundDelayMs: this.sanitizeCount(snapshot?.roundDelayMs ?? CommonConstants.DEFAULT_ROUND_DELAY_MS),
-      timeLimitMs: this.sanitizeCount(snapshot?.timeLimitMs),
-      remainingTimeMs: this.sanitizeCount(snapshot?.remainingTimeMs),
-      updatedAt: this.sanitizeCount(snapshot?.updatedAt),
-      message
-    };
-  }
-
-  private normalizeProgressMessage(message: string, gameOver: boolean): string {
-    if (gameOver) {
-      return message;
-    }
-
-    if (message === 'Correct!' || message.startsWith('Wrong! It was ')) {
-      return '';
-    }
-
-    return message;
-  }
 
   private buildSessionSnapshot(session: GameSessionState, message: string): ClassicSessionSnapshot {
     return {
@@ -777,63 +569,6 @@ export class GameRepository {
     };
   }
 
-  private buildLegacySessionSnapshot(lives: number, gameOver: boolean): ClassicSessionSnapshot {
-    return {
-      mode: GameMode.CLASSIC,
-      lives,
-      gameOver,
-      score: 0,
-      streak: 0,
-      bestStreak: 0,
-      correctCount: 0,
-      wrongCount: 0,
-      completedRounds: 0,
-      sequenceIndex: 0,
-      turnIndex: 0,
-      roundDelayMs: CommonConstants.DEFAULT_ROUND_DELAY_MS,
-      timeLimitMs: 0,
-      remainingTimeMs: 0,
-      updatedAt: this.now(),
-      message: gameOver ? 'You ran out of lives! Game over.' : 'Restored classic progress.'
-    };
-  }
-
-  private buildEmptySessionSnapshot(lives: number, gameOver: boolean): ClassicSessionSnapshot {
-    return {
-      mode: GameMode.CLASSIC,
-      lives,
-      gameOver,
-      score: 0,
-      streak: 0,
-      bestStreak: 0,
-      correctCount: 0,
-      wrongCount: 0,
-      completedRounds: 0,
-      sequenceIndex: 0,
-      turnIndex: 0,
-      roundDelayMs: CommonConstants.DEFAULT_ROUND_DELAY_MS,
-      timeLimitMs: 0,
-      remainingTimeMs: 0,
-      updatedAt: 0,
-      message: ''
-    };
-  }
-
-  private buildEmptyCompletedSessionSummary(): LastCompletedSessionSummary {
-    return {
-      sessionId: '',
-      mode: GameMode.CLASSIC,
-      reason: GameResultReason.OUT_OF_LIVES,
-      summary: '',
-      score: 0,
-      livesRemaining: CommonConstants.DEFAULT_LIVES,
-      correctCount: 0,
-      wrongCount: 0,
-      bestStreak: 0,
-      completedRounds: 0,
-      completedAt: 0
-    };
-  }
 
   private buildCompletedSessionSummary(session: GameSessionState, reason: GameResultReason, message: string): LastCompletedSessionSummary {
     return {
@@ -865,25 +600,6 @@ export class GameRepository {
     };
   }
 
-  private normalizeCompletedSessionSummary(summary?: LastCompletedSessionSummary): LastCompletedSessionSummary {
-    if (!summary) {
-      return this.buildEmptyCompletedSessionSummary();
-    }
-
-    return {
-      sessionId: summary.sessionId ?? this.makeSessionId(),
-      mode: summary.mode ?? GameMode.CLASSIC,
-      reason: summary.reason ?? GameResultReason.OUT_OF_LIVES,
-      summary: summary.summary ?? '',
-      score: this.sanitizeCount(summary.score),
-      livesRemaining: this.sanitizeLives(summary.livesRemaining),
-      correctCount: this.sanitizeCount(summary.correctCount),
-      wrongCount: this.sanitizeCount(summary.wrongCount),
-      bestStreak: this.sanitizeCount(summary.bestStreak),
-      completedRounds: this.sanitizeCount(summary.completedRounds),
-      completedAt: this.sanitizeCount(summary.completedAt)
-    };
-  }
 
   private buildHistoryEntry(result: GameResult, session: GameSessionState, message: string): SessionHistoryEntry {
     return {
@@ -901,50 +617,6 @@ export class GameRepository {
     };
   }
 
-  private touchAchievementProgress(state: DurableGameRepositoryState, session: GameSessionState, result?: GameResult): void {
-    state.achievements = this.applyAchievementProgress(state.achievements, state.profile.stats);
-    if (result) {
-      state.profile.stats.bestScore = Math.max(state.profile.stats.bestScore, result.finalScore);
-      state.profile.stats.bestStreak = Math.max(state.profile.stats.bestStreak, result.bestStreak);
-    } else {
-      state.profile.stats.bestStreak = Math.max(state.profile.stats.bestStreak, session.bestStreak);
-    }
-  }
-
-  private createDefaultState(): DurableGameRepositoryState {
-    return {
-      schemaVersion: GameRepository.SCHEMA_VERSION,
-      profile: {
-        lives: CommonConstants.DEFAULT_LIVES,
-        gameOver: false,
-        classicSessionActive: false,
-        onboardingCompleted: false,
-        lifecycleBanner: '',
-        pendingLifecycleBanner: '',
-        timedSessionBackgroundStartedAt: 0,
-        stats: createDefaultStats(),
-        lastSession: this.buildEmptySessionSnapshot(CommonConstants.DEFAULT_LIVES, false),
-        lastCompletedSession: this.buildEmptyCompletedSessionSummary()
-      },
-      settings: {
-        backgroundPenaltyEnabled: true,
-        backgroundPolicy: 'penalize' as BackgroundPolicy,
-        timedBackgroundPolicy: 'pause' as TimedBackgroundPolicy,
-        preferredMode: GameMode.CLASSIC,
-        keepLifecycleSnapshots: true,
-        hapticsEnabled: true,
-        dailyReminderEnabled: false,
-        dailyReminderHour: 20,
-        dailyReminderMinute: 0,
-        dailyReminderStatus: 'idle' as ReminderScheduleStatus,
-        dailyReminderToken: '',
-        dailyReminderUpdatedAt: 0
-      },
-      history: [],
-      achievements: createDefaultAchievements(),
-      lifecycleSnapshots: []
-    };
-  }
 
   private tryParseState(rawState: string | undefined): DurableGameRepositoryState | undefined {
     return tryParseDurableState<DurableGameRepositoryState>(rawState, DOMAIN, TAG);
@@ -982,12 +654,8 @@ export class GameRepository {
     return sanitizeReminderToken(value);
   }
 
-  private makeSessionId(): string {
-    return `session-${this.now()}-${Math.floor(Math.random() * 10000)}`;
-  }
-
   private now(): number {
-    return new Date().getTime();
+    return Date.now();
   }
 }
 

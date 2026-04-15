@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "com.hmosdemos.wearable.guessthenum",
+    "bundleName": "com.hmosdemos.wearable.guess_the_num",
     "vendor": "hmosdemos",
     "versionCode": 1000000,
     "versionName": "1.0.0",

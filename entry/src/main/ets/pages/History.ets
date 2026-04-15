@@ -5,9 +5,8 @@ import { gameRepository } from '../data/GameRepository';
 import { GameMode } from '../game/models/GameMode';
 import { SessionHistoryEntry } from '../data/models/GameRepositoryTypes';
 
-@Entry
 @Component
-struct History {
+export struct History {
   @State selectedMode: string = 'all';
   @State selectedSort: string = 'newest';
   @State entries: SessionHistoryEntry[] = [];

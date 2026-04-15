@@ -4,9 +4,8 @@ import PageRouteTracker from '../common/util/PageRouteTracker';
 import { gameRepository } from '../data/GameRepository';
 import { ReminderScheduleStatus } from '../data/models/GameRepositoryTypes';
 
-@Entry
 @Component
-struct Settings {
+export struct Settings {
   @State backgroundPolicy: string = 'penalize';
   @State timedBackgroundPolicy: string = 'pause';
   @State backgroundPenaltyEnabled: boolean = true;

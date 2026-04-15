@@ -1,12 +1,24 @@
 import PageRoutes from '../common/constants/PageRoutes';
+import AppNavigator from '../common/util/AppNavigator';
 import PageRouteTracker from '../common/util/PageRouteTracker';
 import { gameRepository } from '../data/GameRepository';
 import { GameMode } from '../game/models/GameMode';
 import { GameResultReason } from '../game/models/GameResult';
 
-@Entry
+class ResultRouteParams {
+  sessionId: string = '';
+  mode: string = GameMode.CLASSIC;
+  reason: string = '';
+  summary: string = '';
+}
+
+class GameRouteParams {
+  mode: string = GameMode.CLASSIC;
+  resumeClassic: string = 'false';
+}
+
 @Component
-struct Result {
+export struct Result {
   @State modeLabel: string = 'Game';
   @State summaryText: string = 'No completed session found.';
   @State scoreText: string = 'Score 0';
@@ -19,7 +31,7 @@ struct Result {
   }
 
   private refreshResult() {
-    const params = this.getUIContext().getRouter().getState().params as Object as Record<string, string> | undefined;
+    const params = AppNavigator.consumeParams<ResultRouteParams>(PageRoutes.RESULT);
     const completed = gameRepository.getLastCompletedSession();
     const mode = (params?.mode as GameMode) ?? completed.mode ?? GameMode.CLASSIC;
     this.replayMode = mode;
@@ -34,12 +46,11 @@ struct Result {
     }
   }
 
-  private async replay(): Promise<void> {
+  private replay(): void {
     PageRouteTracker.setCurrentPage(PageRoutes.GAME);
-    try {
-      await this.getUIContext().getRouter().pushUrl({ url: PageRoutes.GAME, params: { mode: this.replayMode } });
-    } catch (_error) {
-    }
+    const params: GameRouteParams = new GameRouteParams();
+    params.mode = this.replayMode;
+    AppNavigator.push(PageRoutes.GAME, params);
   }
 
   build() {
@@ -91,7 +102,7 @@ struct Result {
             .backgroundColor('#E58A2B')
             .borderRadius(18)
             .margin({ bottom: 8 })
-            .onClick(() => { void this.replay(); })
+            .onClick(() => { this.replay(); })
 
           Button('Home')
             .width('100%')
@@ -102,7 +113,7 @@ struct Result {
             .borderRadius(17)
             .onClick(() => {
               PageRouteTracker.setCurrentPage(PageRoutes.HOME);
-              void this.getUIContext().getRouter().pushUrl({ url: PageRoutes.HOME }).catch(() => {});
+              AppNavigator.clearToHome();
             })
         }
         .width('100%')

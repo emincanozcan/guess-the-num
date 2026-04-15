@@ -5,9 +5,8 @@ import PageRouteTracker from '../common/util/PageRouteTracker';
 import { gameRepository } from '../data/GameRepository';
 import { AchievementProgress } from '../data/models/GameRepositoryTypes';
 
-@Entry
 @Component
-struct Stats {
+export struct Stats {
   @State achievements: AchievementProgress[] = [];
 
   onPageShow() {

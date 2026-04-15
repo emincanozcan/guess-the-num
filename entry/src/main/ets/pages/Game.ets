@@ -1,6 +1,7 @@
 import CommonConstants from '../common/constants/CommonConstants';
 import PageRoutes from '../common/constants/PageRoutes';
 import { HapticEvent, wearableHapticsService } from '../common/services/WearableHapticsService';
+import AppNavigator from '../common/util/AppNavigator';
 import { globalMessageStore as GlobalDataStore } from '../common/util/GlobalDataStorage';
 import PageRouteTracker from '../common/util/PageRouteTracker';
 import { ClassicSessionSnapshot } from '../data/models/GameRepositoryTypes';
@@ -11,14 +12,24 @@ import { GameRound } from '../game/models/GameRound';
 import { GameResult } from '../game/models/GameResult';
 import { GameSessionState } from '../game/models/GameSessionState';
 
-@Entry
+class GameRouteParams {
+  mode: string = GameMode.CLASSIC;
+  resumeClassic: string = 'false';
+}
+
+class ResultRouteParams {
+  sessionId: string = '';
+  mode: string = GameMode.CLASSIC;
+  reason: string = '';
+  summary: string = '';
+}
+
 @Component
-struct Game {
+export struct Game {
   @StorageLink('userLives') lives: number = GlobalDataStore.userLives;
   @StorageLink('gameOver') isGameOver: boolean = GlobalDataStore.isGameOver;
 
   @State displayMessage: string = '';
-  @State secretNumber: number = 1;
   @State options: number[] = [1, 3];
   @State modeLabel: string = 'Classic';
   @State scoreText: string = 'Score 0';
@@ -59,7 +70,7 @@ struct Game {
     gameRepository.clearTimedSessionBackgroundStarted();
     this.lifecycleBanner = '';
     this.inputLocked = false;
-    const params = this.getUIContext().getRouter().getState().params as Record<string, string> | undefined;
+    const params = AppNavigator.consumeParams<GameRouteParams>(PageRoutes.GAME);
     const requestedMode = params?.mode as GameMode | undefined;
     const mode = requestedMode === GameMode.TIMED || requestedMode === GameMode.STREAK ? requestedMode : GameMode.CLASSIC;
     const shouldResumeClassic = params?.resumeClassic === 'true';
@@ -141,7 +152,6 @@ struct Game {
 
   private syncRoundState(round: GameRound) {
     this.options = round.options;
-    this.secretNumber = round.secretNumber;
   }
 
   private syncStorageState() {
@@ -174,7 +184,7 @@ struct Game {
     if (!this.session || this.session.mode !== GameMode.TIMED || this.session.isGameOver || gameRepository.isTimedSessionBackgroundPaused()) {
       return;
     }
-    const elapsed = gameRepository.consumeTimedSessionBackgroundElapsed(new Date().getTime());
+    const elapsed = gameRepository.consumeTimedSessionBackgroundElapsed(Date.now());
     if (elapsed > 0) {
       this.gameEngine.advanceTimer(this.session, elapsed);
       this.syncStorageState();
@@ -226,23 +236,17 @@ struct Game {
     this.displayMessage = summary;
     this.triggerHaptic('session-complete');
     gameRepository.recordCompletedSession(this.session!, result, summary);
-    void this.routeToResult(result, summary);
+    this.routeToResult(result, summary);
   }
 
-  private async routeToResult(result: GameResult, summary: string): Promise<void> {
+  private routeToResult(result: GameResult, summary: string): void {
     PageRouteTracker.setCurrentPage(PageRoutes.RESULT);
-    try {
-      await this.getUIContext().getRouter().pushUrl({
-        url: PageRoutes.RESULT,
-        params: {
-          sessionId: `${result.completedAt}`,
-          mode: result.mode,
-          reason: result.reason,
-          summary
-        }
-      });
-    } catch (_error) {
-    }
+    const params: ResultRouteParams = new ResultRouteParams();
+    params.sessionId = `${result.completedAt}`;
+    params.mode = result.mode;
+    params.reason = result.reason;
+    params.summary = summary;
+    AppNavigator.push(PageRoutes.RESULT, params);
   }
 
   handleGuess(guess: number) {
@@ -328,9 +332,8 @@ struct Game {
 
   build() {
     Column() {
-      Column() {
-        Blank()
-          .height(18)
+      Blank()
+        .height(18)
 
         Row() {
           Text(`❤️ ${this.lives}`)
@@ -455,7 +458,10 @@ struct Game {
                 .onClick(() => {
                   const completed = gameRepository.getLastCompletedSession();
                   PageRouteTracker.setCurrentPage(PageRoutes.RESULT);
-                  void this.getUIContext().getRouter().pushUrl({ url: PageRoutes.RESULT, params: { mode: completed.mode, summary: completed.summary } }).catch(() => {});
+                  const params: ResultRouteParams = new ResultRouteParams();
+                  params.mode = completed.mode;
+                  params.summary = completed.summary;
+                  AppNavigator.push(PageRoutes.RESULT, params);
                 })
             }
             .width('100%')
@@ -467,13 +473,10 @@ struct Game {
           .backgroundColor('#FFF7FB')
           .borderRadius(18)
         }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Center)
-      .justifyContent(FlexAlign.SpaceBetween)
-      .height('100%')
     }
     .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .justifyContent(FlexAlign.SpaceBetween)
     .height('100%')
     .padding({ left: 22, right: 22, top: 20, bottom: 26 })
     .backgroundColor('#FFE6F2')

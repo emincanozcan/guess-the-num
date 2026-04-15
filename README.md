@@ -1,6 +1,6 @@
-> **Note:** To access all shared projects, get information about environment setup, and view other guides, please visit [Explore-In-HMOS-Wearable Index](https://github.com/Explore-In-HMOS-Wearable/hmos-index).
-
 # Guess the Num Game
+
+> **Note:** To access all shared projects, get information about environment setup, and view other guides, please visit [Explore-In-HMOS-Wearable Index](https://github.com/Explore-In-HMOS-Wearable/hmos-index).
 
 **Guess the Num Game** is a HarmonyOS wearable number guessing game designed for small circular screens. It includes classic, timed, and streak-based play modes, quick resume for active sessions, lifecycle logs, history and stats views, configurable background behavior, and durable state persistence across app restarts.
 
@@ -22,8 +22,6 @@ This project demonstrates lifecycle event handling, state management, wearable-f
 - **User Feedback**: Displays lives, score, streaks, results, achievements, and lifecycle status updates.
 - **Simple and Responsive UI**: Designed for small circular wearable screens with compact controls and readable cards.
 - **Backup and Restore**: Uses the backup extension to serialize and restore repository-backed app data.
-
-
 # Technology
 ## Stack
 - **Languages**: ArkTS, ArkUI
