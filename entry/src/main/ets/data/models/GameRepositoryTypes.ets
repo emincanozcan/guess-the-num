@@ -109,7 +109,6 @@ export interface LastCompletedSessionSummary {
 export interface LifecycleSnapshot {
   capturedAt: number;
   entries: LifecycleEntry[];
-  messages?: string[];
 }
 
 export interface LifecycleEntry {

@@ -506,17 +506,13 @@ export class GameRepository extends GameRepositoryStateSupport {
   private readStateInternal(): DurableGameRepositoryState {
     const rawState = this.readDurableState();
     const parsed = this.tryParseState(rawState);
-    const legacyLives = AppStorage.get<number>(USER_LIVES_KEY) ?? CommonConstants.DEFAULT_LIVES;
-    const legacyGameOver = AppStorage.get<boolean>(GAME_OVER_KEY) ?? false;
-
-    if (parsed && !this.shouldMigrateFromLegacy(parsed, legacyLives, legacyGameOver)) {
+    if (parsed) {
       hilog.info(DOMAIN, TAG, 'readStateInternal using durable parsed state history=%{public}d', parsed.history.length);
       return this.normalizeState(parsed);
     }
 
-    hilog.info(DOMAIN, TAG, 'readStateInternal falling back to legacy migration lives=%{public}d gameOver=%{public}s',
-      legacyLives, JSON.stringify(legacyGameOver));
-    return this.migrateLegacyState(legacyLives, legacyGameOver);
+    hilog.info(DOMAIN, TAG, 'readStateInternal no durable parsed state, using defaults');
+    return this.createDefaultState();
   }
 
   private writeState(state: DurableGameRepositoryState): void {
@@ -535,18 +531,6 @@ export class GameRepository extends GameRepositoryStateSupport {
       this.initialize();
     }
   }
-
-  private migrateLegacyState(legacyLives: number, legacyGameOver: boolean): DurableGameRepositoryState {
-    const sanitizedLives = this.sanitizeLives(legacyLives);
-    const state = this.createDefaultState();
-    state.profile.lives = sanitizedLives;
-    state.profile.gameOver = legacyGameOver;
-    state.profile.lastSession = this.buildLegacySessionSnapshot(sanitizedLives, legacyGameOver);
-    this.writeState(state);
-    this.mirrorClassicState(sanitizedLives, legacyGameOver);
-    return state;
-  }
-
 
   private buildSessionSnapshot(session: GameSessionState, message: string): ClassicSessionSnapshot {
     return {

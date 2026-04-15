@@ -10,7 +10,6 @@ import {
   createDefaultAchievements,
   createDefaultStats,
   createHistoryEntry,
-  createLifecycleEntry,
   createSettings,
   createStats,
   sanitizeCount,
@@ -38,12 +37,6 @@ import {
 
 export abstract class GameRepositoryStateSupport {
   protected static readonly SCHEMA_VERSION = 1;
-
-  protected shouldMigrateFromLegacy(state: DurableGameRepositoryState, legacyLives: number, legacyGameOver: boolean): boolean {
-    const rawStateLooksDefault = this.isDefaultRepositoryShape(state);
-    const legacyDiffersFromDefault = sanitizeLives(legacyLives) !== CommonConstants.DEFAULT_LIVES || legacyGameOver !== false;
-    return rawStateLooksDefault && legacyDiffersFromDefault;
-  }
 
   protected normalizeState(state: DurableGameRepositoryState): DurableGameRepositoryState {
     const normalized = this.createDefaultState();
@@ -97,27 +90,6 @@ export abstract class GameRepositoryStateSupport {
       return '';
     }
     return message;
-  }
-
-  protected buildLegacySessionSnapshot(lives: number, gameOver: boolean): ClassicSessionSnapshot {
-    return {
-      mode: GameMode.CLASSIC,
-      lives,
-      gameOver,
-      score: 0,
-      streak: 0,
-      bestStreak: 0,
-      correctCount: 0,
-      wrongCount: 0,
-      completedRounds: 0,
-      sequenceIndex: 0,
-      turnIndex: 0,
-      roundDelayMs: CommonConstants.DEFAULT_ROUND_DELAY_MS,
-      timeLimitMs: 0,
-      remainingTimeMs: 0,
-      updatedAt: Date.now(),
-      message: gameOver ? 'You ran out of lives! Game over.' : 'Restored classic progress.'
-    };
   }
 
   protected buildEmptySessionSnapshot(lives: number, gameOver: boolean): ClassicSessionSnapshot {
@@ -225,30 +197,6 @@ export abstract class GameRepositoryStateSupport {
     return `session-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   }
 
-  private isDefaultRepositoryShape(state: DurableGameRepositoryState): boolean {
-    return state?.schemaVersion === GameRepositoryStateSupport.SCHEMA_VERSION &&
-      sanitizeLives(state?.profile?.lives) === CommonConstants.DEFAULT_LIVES &&
-      (state?.profile?.gameOver ?? false) === false &&
-      (state?.profile?.classicSessionActive ?? false) === false &&
-      sanitizeCount(state?.profile?.stats?.totalSessions) === 0 &&
-      sanitizeCount(state?.profile?.stats?.completedSessions) === 0 &&
-      sanitizeCount(state?.profile?.stats?.totalCorrect) === 0 &&
-      sanitizeCount(state?.profile?.stats?.totalWrong) === 0 &&
-      sanitizeCount(state?.profile?.stats?.bestScore) === 0 &&
-      sanitizeCount(state?.profile?.stats?.bestStreak) === 0 &&
-      sanitizeCount(state?.profile?.stats?.longestRun) === 0 &&
-      sanitizeCount(state?.profile?.stats?.longestStreak) === 0 &&
-      sanitizeCount(state?.profile?.stats?.bestTimedScore) === 0 &&
-      sanitizeCount(state?.profile?.stats?.backgroundPenalties) === 0 &&
-      sanitizeCount(state?.profile?.stats?.backgroundLosses) === 0 &&
-      sanitizeCount(state?.profile?.stats?.lastPlayedAt) === 0 &&
-      sanitizeLives(state?.profile?.lastSession?.lives) === CommonConstants.DEFAULT_LIVES &&
-      (state?.profile?.lastSession?.gameOver ?? false) === false &&
-      sanitizeCount(state?.history?.length) === 0 &&
-      sanitizeCount(state?.lifecycleSnapshots?.length) === 0 &&
-      sanitizeCount(state?.achievements?.length) >= 0;
-  }
-
   private normalizeSettings(settings?: GameSettings): GameSettings {
     const defaults = this.createDefaultState().settings;
     return {
@@ -311,21 +259,14 @@ export abstract class GameRepositoryStateSupport {
       return result;
     }
     for (const snapshot of snapshots) {
-      result.push({ capturedAt: sanitizeCount(snapshot?.capturedAt), entries: this.normalizeLifecycleEntries(snapshot?.entries, snapshot?.messages) });
+      result.push({ capturedAt: sanitizeCount(snapshot?.capturedAt), entries: this.normalizeLifecycleEntries(snapshot?.entries) });
     }
     return result;
   }
 
-  private normalizeLifecycleEntries(entries?: LifecycleEntry[], legacyMessages?: string[]): LifecycleEntry[] {
+  private normalizeLifecycleEntries(entries?: LifecycleEntry[]): LifecycleEntry[] {
     if (entries && entries.length > 0) {
       return copyLifecycleEntries(entries);
-    }
-    if (legacyMessages && legacyMessages.length > 0) {
-      const legacyEntries: LifecycleEntry[] = [];
-      for (const message of legacyMessages) {
-        legacyEntries.push(createLifecycleEntry(Date.now(), 'Lifecycle', message));
-      }
-      return legacyEntries;
     }
     return [];
   }
