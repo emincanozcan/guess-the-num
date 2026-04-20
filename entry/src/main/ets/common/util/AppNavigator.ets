@@ -1,3 +1,5 @@
+import PageRoutes from '../constants/PageRoutes';
+
 export default class AppNavigator {
   private static readonly PATH_STACK_KEY: string = 'appNavPathStack';
   private static readonly PARAMS_KEY_PREFIX: string = 'appNavParams:';
@@ -34,6 +36,7 @@ export default class AppNavigator {
       return;
     }
     pathStack.clear();
+    pathStack.pushPath({ name: PageRoutes.HOME });
   }
 
   static setParams(routeName: string, params: Object): void {

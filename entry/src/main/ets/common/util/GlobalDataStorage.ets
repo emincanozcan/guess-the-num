@@ -3,10 +3,6 @@ import { gameRepository } from '../../data/GameRepository';
 class GlobalDataStore {
   message: string = '';
 
-  constructor() {
-    gameRepository.initialize();
-  }
-
   get userLives(): number {
     return gameRepository.getClassicLives();
   }

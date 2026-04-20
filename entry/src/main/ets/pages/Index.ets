@@ -1,12 +1,14 @@
 import PageRoutes from '../common/constants/PageRoutes';
 import AppNavigator from '../common/util/AppNavigator';
-import { Game } from './Game';
-import { History } from './History';
-import { Home } from './Home';
-import { Logs } from './Logs';
-import { Result } from './Result';
-import { Settings } from './Settings';
-import { Stats } from './Stats';
+import {
+  GameRouteBuilder,
+  HistoryRouteBuilder,
+  HomeRouteBuilder,
+  LogsRouteBuilder,
+  ResultRouteBuilder,
+  SettingsRouteBuilder,
+  StatsRouteBuilder
+} from './RouteBuilders';
 
 @Entry
 @Component
@@ -19,28 +21,35 @@ struct Index {
 
   @Builder
   private pageMap(name: string) {
-    if (name === PageRoutes.GAME) {
-      Game();
+    if (name === PageRoutes.HOME) {
+      HomeRouteBuilder();
+    } else if (name === PageRoutes.GAME) {
+      GameRouteBuilder();
     } else if (name === PageRoutes.RESULT) {
-      Result();
+      ResultRouteBuilder();
     } else if (name === PageRoutes.STATS) {
-      Stats();
+      StatsRouteBuilder();
     } else if (name === PageRoutes.HISTORY) {
-      History();
+      HistoryRouteBuilder();
     } else if (name === PageRoutes.LOGS) {
-      Logs();
+      LogsRouteBuilder();
     } else if (name === PageRoutes.SETTINGS) {
-      Settings();
+      SettingsRouteBuilder();
+    }
+  }
+
+  private seedInitialRoute(): void {
+    if (this.pathStack.size() === 0) {
+      this.pathStack.pushPath({ name: PageRoutes.HOME });
     }
   }
 
   build() {
-    Navigation(this.pathStack) {
-      Home();
-    }
+    Navigation(this.pathStack) {}
     .mode(NavigationMode.Stack)
     .hideNavBar(true)
     .navDestination(this.pageMap)
+    .onAppear(() => this.seedInitialRoute())
     .width('100%')
     .height('100%')
   }

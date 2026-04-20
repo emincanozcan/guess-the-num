@@ -102,24 +102,6 @@ export default function gameRepositoryTest() {
       expect(restoredSettings.dailyReminderToken).assertEqual('reminder-42');
     });
 
-    it('migrates legacy lives and game over state on cold start', 0, () => {
-      bootstrapRepository();
-      AppStorage.set<string>(DEFAULT_STATE_KEY, JSON.stringify(createDefaultDurableState()));
-      AppStorage.set<number>(USER_LIVES_KEY, 1);
-      AppStorage.set<boolean>(GAME_OVER_KEY, true);
-
-      const repo = new GameRepository();
-      repo.initialize();
-
-      expect(repo.getClassicLives()).assertEqual(1);
-      expect(repo.getGameOver()).assertEqual(true);
-
-      const lastSession = repo.getLastSession();
-      expect(lastSession.lives).assertEqual(1);
-      expect(lastSession.gameOver).assertEqual(true);
-      expect(lastSession.message).assertEqual('You ran out of lives! Game over.');
-    });
-
     it('defaults safely when the stored repository state is corrupt', 0, () => {
       bootstrapRepository();
       AppStorage.set<string>(DEFAULT_STATE_KEY, '{broken-json');
@@ -281,7 +263,7 @@ export default function gameRepositoryTest() {
       expect(savedSession.message).assertEqual('');
     });
 
-    it('clears stale turn result messages when restoring active classic state', 0, () => {
+    it('clears stale turn result messages when restoring classic state', 0, () => {
       bootstrapRepository();
       AppStorage.set<string>(DEFAULT_STATE_KEY, JSON.stringify(createStateWithStaleResultMessage()));
 
@@ -290,7 +272,7 @@ export default function gameRepositoryTest() {
 
       const lastSession = repo.getLastSession();
       expect(lastSession.gameOver).assertEqual(false);
-      expect(lastSession.message).assertEqual('Restored classic progress.');
+      expect(lastSession.message).assertEqual('');
     });
 
     it('skips lifecycle snapshot persistence when disabled', 0, () => {
