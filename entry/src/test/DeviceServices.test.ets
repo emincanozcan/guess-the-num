@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@ohos/hypium';
+import { describe, expect, it } from '@ohos/hypium';
 import { DailyReminderService, ReminderDriver } from '../main/ets/common/services/DailyReminderService';
 import { HapticsDriver, WearableHapticsService } from '../main/ets/common/services/WearableHapticsService';
 

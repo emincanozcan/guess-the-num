@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@ohos/hypium';
+import { describe, expect, it } from '@ohos/hypium';
 import { harmonyReminderDriver } from '../main/ets/common/services/adapters/HarmonyReminderAdapter';
 
 export default function harmonyReminderAdapterTest() {

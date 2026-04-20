@@ -28,7 +28,6 @@ class ResultRouteParams {
 export struct Game {
   @StorageLink('userLives') lives: number = GlobalDataStore.userLives;
   @StorageLink('gameOver') isGameOver: boolean = GlobalDataStore.isGameOver;
-
   @State displayMessage: string = '';
   @State options: number[] = [1, 3];
   @State modeLabel: string = 'Classic';
@@ -37,7 +36,6 @@ export struct Game {
   @State progressText: string = '';
   @State timerText: string = '';
   @State lifecycleBanner: string = '';
-
   private readonly gameEngine: GameEngine = new GameEngine();
   private readonly haptics = wearableHapticsService;
   private session: GameSessionState | null = null;
@@ -64,6 +62,216 @@ export struct Game {
     this.ensureTimer();
   }
 
+  handleGuess(guess: number) {
+    if (!this.session || !this.currentRound || this.isGameOver || this.inputLocked) {
+      return;
+    }
+    this.inputLocked = true;
+    const turnResult = this.gameEngine.submitGuess(this.session, this.currentRound, guess);
+    this.displayMessage = turnResult.message;
+    if (turnResult.isCorrect) {
+      this.triggerHaptic('correct');
+      if (this.session.streak > 0 && this.session.streak % 3 === 0) {
+        this.triggerHaptic('streak-milestone');
+      }
+      if (turnResult.result && this.session.mode === GameMode.STREAK) {
+        this.triggerHaptic('streak-complete');
+      }
+    } else {
+      this.triggerHaptic('wrong');
+    }
+    this.syncStorageState();
+    this.updateHud();
+    if (turnResult.result) {
+      this.finishSession(turnResult.result, turnResult.message);
+      return;
+    }
+    if (this.session.mode === GameMode.CLASSIC) {
+      gameRepository.saveClassicProgress(this.session, this.displayMessage);
+    }
+    if (turnResult.nextRound) {
+      const nextRound = turnResult.nextRound;
+      const expectedToken = this.roundToken += 1;
+      setTimeout(() => {
+        if (!this.isGameOver && this.session && expectedToken === this.roundToken) {
+          this.currentRound = nextRound;
+          this.syncRoundState(nextRound);
+          this.inputLocked = false;
+          this.updateHud();
+        }
+      }, this.session.roundDelayMs);
+    } else {
+      this.inputLocked = false;
+    }
+  }
+
+  build() {
+    Column() {
+      Blank()
+        .height(18)
+
+      Row() {
+        Text(`❤️ ${this.lives}`)
+          .fontSize(13)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#D81B60')
+        Text(this.timerText === '' ? this.modeLabel : this.timerText)
+          .fontSize(10)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#8B3A62')
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.SpaceBetween)
+      .padding({ left: 10, right: 10 })
+      .margin({ bottom: 3 })
+
+      if (this.lifecycleBanner) {
+        Text(this.lifecycleBanner)
+          .fontSize(11)
+          .textAlign(TextAlign.Center)
+          .fontColor('#5E2740')
+          .width('100%')
+          .padding(6)
+          .margin({ bottom: 6 })
+          .backgroundColor('#FFF5FA')
+      }
+
+      Row() {
+        Text(this.scoreText)
+          .fontSize(10)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#8B3A62')
+          .layoutWeight(1)
+        Text(this.streakText)
+          .fontSize(10)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#8B3A62')
+          .textAlign(TextAlign.End)
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .padding({
+        left: 8,
+        right: 8,
+        top: 5,
+        bottom: 5
+      })
+      .backgroundColor('#FFF7FB')
+      .borderRadius(16)
+
+      if (this.progressText !== '') {
+        Text(this.progressText)
+          .fontSize(10)
+          .fontColor('#9A4A67')
+          .margin({ top: 3, bottom: 1 })
+          .textAlign(TextAlign.Center)
+          .width('100%')
+      }
+
+      Text(this.isGameOver ? 'Session complete' : 'Pick a number')
+        .fontSize(11)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#284BFF')
+        .padding({ top: 1, bottom: 2 })
+        .textAlign(TextAlign.Center)
+        .width('100%')
+
+      if (!this.isGameOver) {
+        QuestionMark()
+        Row() {
+          Button(`${this.options[0]}`)
+            .width('34%')
+            .height(34)
+            .backgroundColor('#FFB300')
+            .fontColor('#FFFFFF')
+            .fontSize(14)
+            .borderRadius(17)
+            .margin({ right: 8 })
+            .onClick(() => this.handleGuess(this.options[0]))
+          Button(`${this.options[1]}`)
+            .width('34%')
+            .height(34)
+            .backgroundColor('#FFB300')
+            .fontColor('#FFFFFF')
+            .fontSize(14)
+            .borderRadius(17)
+            .margin({ left: 8 })
+            .onClick(() => this.handleGuess(this.options[1]))
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .margin({ top: 4, bottom: 28 })
+      } else {
+        Column() {
+          Text('Game Over')
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#B31252')
+            .textAlign(TextAlign.Center)
+            .width('100%')
+
+          Text(this.displayMessage)
+            .fontSize(12)
+            .fontColor('#7A3654')
+            .textAlign(TextAlign.Center)
+            .width('100%')
+            .margin({ top: 6, bottom: 10 })
+
+          Row() {
+            Button('Replay')
+              .layoutWeight(1)
+              .height(34)
+              .fontSize(13)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#E58A2B')
+              .borderRadius(17)
+              .margin({ right: 8 })
+              .onClick(() => this.startGameFromRoute())
+            Button('Result')
+              .layoutWeight(1)
+              .height(34)
+              .fontSize(13)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#D96C8B')
+              .borderRadius(17)
+              .margin({ left: 8 })
+              .onClick(() => {
+                const completed = gameRepository.getLastCompletedSession();
+                PageRouteTracker.setCurrentPage(PageRoutes.RESULT);
+                const params: ResultRouteParams = new ResultRouteParams();
+                params.mode = completed.mode;
+                params.summary = completed.summary;
+                AppNavigator.push(PageRoutes.RESULT, params);
+              })
+          }
+          .width('100%')
+          .margin({ top: 2 })
+        }
+        .width('100%')
+        .padding({
+          left: 12,
+          right: 12,
+          top: 12,
+          bottom: 12
+        })
+        .margin({ top: 8 })
+        .backgroundColor('#FFF7FB')
+        .borderRadius(18)
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .justifyContent(FlexAlign.SpaceBetween)
+    .height('100%')
+    .padding({
+      left: 22,
+      right: 22,
+      top: 20,
+      bottom: 26
+    })
+    .backgroundColor('#FFE6F2')
+  }
+
   private startGameFromRoute() {
     this.stopTimer();
     gameRepository.setTimedSessionBackgroundPaused(false);
@@ -72,7 +280,8 @@ export struct Game {
     this.inputLocked = false;
     const params = AppNavigator.consumeParams<GameRouteParams>(PageRoutes.GAME);
     const requestedMode = params?.mode as GameMode | undefined;
-    const mode = requestedMode === GameMode.TIMED || requestedMode === GameMode.STREAK ? requestedMode : GameMode.CLASSIC;
+    const mode =
+      requestedMode === GameMode.TIMED || requestedMode === GameMode.STREAK ? requestedMode : GameMode.CLASSIC;
     const shouldResumeClassic = params?.resumeClassic === 'true';
     this.currentMode = mode;
     PageRouteTracker.setCurrentGameMode(mode);
@@ -166,11 +375,13 @@ export struct Game {
       return;
     }
     this.scoreText = `Score ${this.session.score}`;
-    this.streakText = `Streak ${this.session.streak}${this.currentMode === GameMode.STREAK ? ` / ${this.gameEngine.getModeConfig(GameMode.STREAK).targetStreak}` : ''}`;
+    this.streakText = `Streak ${this.session.streak}${this.currentMode === GameMode.STREAK ?
+      ` / ${this.gameEngine.getModeConfig(GameMode.STREAK).targetStreak}` : ''}`;
     this.progressText = this.currentMode === GameMode.STREAK
       ? `Goal ${this.session.streak}/${this.gameEngine.getModeConfig(GameMode.STREAK).targetStreak}`
       : `Rounds ${this.session.completedRounds}`;
-    this.timerText = this.currentMode === GameMode.TIMED ? `Time ${Math.ceil(this.session.remainingTimeMs / 1000)}s` : '';
+    this.timerText =
+      this.currentMode === GameMode.TIMED ? `Time ${Math.ceil(this.session.remainingTimeMs / 1000)}s` : '';
     if (this.currentMode === GameMode.TIMED) {
       if (gameRepository.isTimedSessionBackgroundPaused()) {
         this.displayMessage = 'Timed session paused while the app was in the background.';
@@ -181,7 +392,8 @@ export struct Game {
   }
 
   private applyTimedBackgroundElapsed() {
-    if (!this.session || this.session.mode !== GameMode.TIMED || this.session.isGameOver || gameRepository.isTimedSessionBackgroundPaused()) {
+    if (!this.session || this.session.mode !== GameMode.TIMED || this.session.isGameOver ||
+    gameRepository.isTimedSessionBackgroundPaused()) {
       return;
     }
     const elapsed = gameRepository.consumeTimedSessionBackgroundElapsed(Date.now());
@@ -193,10 +405,11 @@ export struct Game {
 
   private ensureTimer() {
     this.stopTimer();
-    if (!this.session || this.session.mode !== GameMode.TIMED || this.session.isGameOver || gameRepository.isTimedSessionBackgroundPaused()) {
+    if (!this.session || this.session.mode !== GameMode.TIMED || this.session.isGameOver ||
+    gameRepository.isTimedSessionBackgroundPaused()) {
       return;
     }
-      this.timerHandle = setInterval((): void => this.tickTimer(), 1000);
+    this.timerHandle = setInterval((): void => this.tickTimer(), 1000);
   }
 
   private tickTimer() {
@@ -249,49 +462,6 @@ export struct Game {
     AppNavigator.push(PageRoutes.RESULT, params);
   }
 
-  handleGuess(guess: number) {
-    if (!this.session || !this.currentRound || this.isGameOver || this.inputLocked) {
-      return;
-    }
-    this.inputLocked = true;
-    const turnResult = this.gameEngine.submitGuess(this.session, this.currentRound, guess);
-    this.displayMessage = turnResult.message;
-    if (turnResult.isCorrect) {
-      this.triggerHaptic('correct');
-      if (this.session.streak > 0 && this.session.streak % 3 === 0) {
-        this.triggerHaptic('streak-milestone');
-      }
-      if (turnResult.result && this.session.mode === GameMode.STREAK) {
-        this.triggerHaptic('streak-complete');
-      }
-    } else {
-      this.triggerHaptic('wrong');
-    }
-    this.syncStorageState();
-    this.updateHud();
-    if (turnResult.result) {
-      this.finishSession(turnResult.result, turnResult.message);
-      return;
-    }
-    if (this.session.mode === GameMode.CLASSIC) {
-      gameRepository.saveClassicProgress(this.session, this.displayMessage);
-    }
-    if (turnResult.nextRound) {
-      const nextRound = turnResult.nextRound;
-      const expectedToken = this.roundToken += 1;
-      setTimeout(() => {
-        if (!this.isGameOver && this.session && expectedToken === this.roundToken) {
-          this.currentRound = nextRound;
-          this.syncRoundState(nextRound);
-          this.inputLocked = false;
-          this.updateHud();
-        }
-      }, this.session.roundDelayMs);
-    } else {
-      this.inputLocked = false;
-    }
-  }
-
   private triggerHaptic(event: HapticEvent): void {
     if (!gameRepository.getSettings().hapticsEnabled) {
       return;
@@ -301,7 +471,7 @@ export struct Game {
 
   private isRestorableClassicSession(savedSession: ClassicSessionSnapshot): boolean {
     return savedSession.updatedAt > 0 && savedSession.mode === GameMode.CLASSIC &&
-      gameRepository.hasActiveClassicSession() && !savedSession.gameOver;
+    gameRepository.hasActiveClassicSession() && !savedSession.gameOver;
   }
 
   private createSessionFromSnapshot(savedSession: ClassicSessionSnapshot): GameSessionState {
@@ -328,158 +498,6 @@ export struct Game {
     roundSession.sequenceIndex = Math.max(0, savedSession.sequenceIndex - 1);
     roundSession.turnIndex = Math.max(0, savedSession.turnIndex - 1);
     return this.gameEngine.createRound(roundSession);
-  }
-
-  build() {
-    Column() {
-      Blank()
-        .height(18)
-
-        Row() {
-          Text(`❤️ ${this.lives}`)
-            .fontSize(13)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#D81B60')
-          Text(this.timerText === '' ? this.modeLabel : this.timerText)
-            .fontSize(10)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#8B3A62')
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.SpaceBetween)
-        .padding({ left: 10, right: 10 })
-        .margin({ bottom: 3 })
-
-        if (this.lifecycleBanner) {
-          Text(this.lifecycleBanner)
-            .fontSize(11)
-            .textAlign(TextAlign.Center)
-            .fontColor('#5E2740')
-            .width('100%')
-            .padding(6)
-            .margin({ bottom: 6 })
-            .backgroundColor('#FFF5FA')
-        }
-
-        Row() {
-          Text(this.scoreText)
-            .fontSize(10)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#8B3A62')
-            .layoutWeight(1)
-          Text(this.streakText)
-            .fontSize(10)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#8B3A62')
-            .textAlign(TextAlign.End)
-            .layoutWeight(1)
-        }
-        .width('100%')
-        .padding({ left: 8, right: 8, top: 5, bottom: 5 })
-        .backgroundColor('#FFF7FB')
-        .borderRadius(16)
-
-        if (this.progressText !== '') {
-          Text(this.progressText)
-            .fontSize(10)
-            .fontColor('#9A4A67')
-            .margin({ top: 3, bottom: 1 })
-            .textAlign(TextAlign.Center)
-            .width('100%')
-        }
-
-        Text(this.isGameOver ? 'Session complete' : 'Pick a number')
-          .fontSize(11)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#284BFF')
-          .padding({ top: 1, bottom: 2 })
-          .textAlign(TextAlign.Center)
-          .width('100%')
-
-        if (!this.isGameOver) {
-          QuestionMark()
-          Row() {
-            Button(`${this.options[0]}`)
-              .width('34%')
-              .height(34)
-              .backgroundColor('#FFB300')
-              .fontColor('#FFFFFF')
-              .fontSize(14)
-              .borderRadius(17)
-              .margin({ right: 8 })
-              .onClick(() => this.handleGuess(this.options[0]))
-            Button(`${this.options[1]}`)
-              .width('34%')
-              .height(34)
-              .backgroundColor('#FFB300')
-              .fontColor('#FFFFFF')
-              .fontSize(14)
-              .borderRadius(17)
-              .margin({ left: 8 })
-              .onClick(() => this.handleGuess(this.options[1]))
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-          .margin({ top: 4, bottom: 28 })
-        } else {
-          Column() {
-            Text('Game Over')
-              .fontSize(14)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#B31252')
-              .textAlign(TextAlign.Center)
-              .width('100%')
-
-            Text(this.displayMessage)
-              .fontSize(12)
-              .fontColor('#7A3654')
-              .textAlign(TextAlign.Center)
-              .width('100%')
-              .margin({ top: 6, bottom: 10 })
-
-            Row() {
-              Button('Replay')
-                .layoutWeight(1)
-                .height(34)
-                .fontSize(13)
-                .fontColor('#FFFFFF')
-                .backgroundColor('#E58A2B')
-                .borderRadius(17)
-                .margin({ right: 8 })
-                .onClick(() => this.startGameFromRoute())
-              Button('Result')
-                .layoutWeight(1)
-                .height(34)
-                .fontSize(13)
-                .fontColor('#FFFFFF')
-                .backgroundColor('#D96C8B')
-                .borderRadius(17)
-                .margin({ left: 8 })
-                .onClick(() => {
-                  const completed = gameRepository.getLastCompletedSession();
-                  PageRouteTracker.setCurrentPage(PageRoutes.RESULT);
-                  const params: ResultRouteParams = new ResultRouteParams();
-                  params.mode = completed.mode;
-                  params.summary = completed.summary;
-                  AppNavigator.push(PageRoutes.RESULT, params);
-                })
-            }
-            .width('100%')
-            .margin({ top: 2 })
-          }
-          .width('100%')
-          .padding({ left: 12, right: 12, top: 12, bottom: 12 })
-          .margin({ top: 8 })
-          .backgroundColor('#FFF7FB')
-          .borderRadius(18)
-        }
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Center)
-    .justifyContent(FlexAlign.SpaceBetween)
-    .height('100%')
-    .padding({ left: 22, right: 22, top: 20, bottom: 26 })
-    .backgroundColor('#FFE6F2')
   }
 }
 

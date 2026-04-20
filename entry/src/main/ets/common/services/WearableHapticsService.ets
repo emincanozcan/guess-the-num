@@ -4,6 +4,7 @@ export type HapticEvent = 'correct' | 'wrong' | 'streak-milestone' | 'streak-com
 
 export interface HapticsDriver {
   vibrate?(durationMs: number): void;
+
   playEffect?(effectId: string): void;
 }
 

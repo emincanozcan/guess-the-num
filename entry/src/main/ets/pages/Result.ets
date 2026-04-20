@@ -30,29 +30,6 @@ export struct Result {
     this.refreshResult();
   }
 
-  private refreshResult() {
-    const params = AppNavigator.consumeParams<ResultRouteParams>(PageRoutes.RESULT);
-    const completed = gameRepository.getLastCompletedSession();
-    const mode = (params?.mode as GameMode) ?? completed.mode ?? GameMode.CLASSIC;
-    this.replayMode = mode;
-    this.modeLabel = `${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
-    this.summaryText = params?.summary || completed.summary || 'Session complete.';
-    this.scoreText = `Score ${completed.score}`;
-    this.detailText = `${completed.correctCount}✓ • ${completed.wrongCount}✗ • Streak ${completed.bestStreak} • Rounds ${completed.completedRounds}`;
-    if (completed.reason === GameResultReason.TIME_EXPIRED) {
-      this.detailText += ' • Time up';
-    } else if (completed.reason === GameResultReason.TARGET_STREAK_REACHED) {
-      this.detailText += ' • Target streak reached';
-    }
-  }
-
-  private replay(): void {
-    PageRouteTracker.setCurrentPage(PageRoutes.GAME);
-    const params: GameRouteParams = new GameRouteParams();
-    params.mode = this.replayMode;
-    AppNavigator.push(PageRoutes.GAME, params);
-  }
-
   build() {
     Column() {
       Scroll() {
@@ -89,7 +66,12 @@ export struct Result {
               .width('100%')
           }
           .width('100%')
-          .padding({ left: 12, right: 12, top: 14, bottom: 14 })
+          .padding({
+            left: 12,
+            right: 12,
+            top: 14,
+            bottom: 14
+          })
           .margin({ bottom: 12 })
           .backgroundColor('#FFF7FB')
           .borderRadius(18)
@@ -102,7 +84,9 @@ export struct Result {
             .backgroundColor('#E58A2B')
             .borderRadius(18)
             .margin({ bottom: 8 })
-            .onClick(() => { this.replay(); })
+            .onClick(() => {
+              this.replay();
+            })
 
           Button('Home')
             .width('100%')
@@ -128,5 +112,29 @@ export struct Result {
     .height('100%')
     .padding(12)
     .backgroundColor('#FFE6F2')
+  }
+
+  private refreshResult() {
+    const params = AppNavigator.consumeParams<ResultRouteParams>(PageRoutes.RESULT);
+    const completed = gameRepository.getLastCompletedSession();
+    const mode = (params?.mode as GameMode) ?? completed.mode ?? GameMode.CLASSIC;
+    this.replayMode = mode;
+    this.modeLabel = `${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+    this.summaryText = params?.summary || completed.summary || 'Session complete.';
+    this.scoreText = `Score ${completed.score}`;
+    this.detailText =
+      `${completed.correctCount}✓ • ${completed.wrongCount}✗ • Streak ${completed.bestStreak} • Rounds ${completed.completedRounds}`;
+    if (completed.reason === GameResultReason.TIME_EXPIRED) {
+      this.detailText += ' • Time up';
+    } else if (completed.reason === GameResultReason.TARGET_STREAK_REACHED) {
+      this.detailText += ' • Target streak reached';
+    }
+  }
+
+  private replay(): void {
+    PageRouteTracker.setCurrentPage(PageRoutes.GAME);
+    const params: GameRouteParams = new GameRouteParams();
+    params.mode = this.replayMode;
+    AppNavigator.push(PageRoutes.GAME, params);
   }
 }

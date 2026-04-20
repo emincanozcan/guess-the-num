@@ -44,90 +44,88 @@ export default class EntryAbility extends UIAbility {
         hilog.info(DOMAIN, TAG, `Window Stage Event: ${window.WindowStageEventType[eventType]}`);
         hilog.info(DOMAIN, 'A', `Current Message: ${globalMessageStore.message}`);
 
-      switch (eventType) {
-        case window.WindowStageEventType.SHOWN:
-        {
-          // Application is visible (foreground)
-          globalMessageStore.message = '👀 Application is visible (foreground)';
-          const shouldShowResumeBanner = this.shouldShowResumeBanner();
-          LifecycleLog.add('foreground', globalMessageStore.message);
-          this.showLifecycleBanner(shouldShowResumeBanner
-            ? 'Returned to the foreground. Background handling follows your selected policy.'
-            : '');
-          this.handleTimedResume();
+        switch (eventType) {
+          case window.WindowStageEventType.SHOWN: {
+            // Application is visible (foreground)
+            globalMessageStore.message = '👀 Application is visible (foreground)';
+            const shouldShowResumeBanner = this.shouldShowResumeBanner();
+            LifecycleLog.add('foreground', globalMessageStore.message);
+            this.showLifecycleBanner(shouldShowResumeBanner
+              ? 'Returned to the foreground. Background handling follows your selected policy.'
+              : '');
+            this.handleTimedResume();
 
-          // Show remaining lives if the game is not over
-          if (!globalMessageStore.isGameOver) {
-            console.info(`Remaining Lives: ${globalMessageStore.userLives}`);
-          }
-          break;
-        }
-        case window.WindowStageEventType.HIDDEN:
-        {
-          // Application is now in the background
-          globalMessageStore.message = '🔒 Application is in background';
-          LifecycleLog.add('background', globalMessageStore.message);
-          const backgroundBanner = this.backgroundPolicyBanner();
-          this.showLifecycleBanner(backgroundBanner);
-          let pendingGameBanner = PageRouteTracker.isCurrentPage(PageRoutes.GAME) ? backgroundBanner : '';
-
-          if (PageRouteTracker.isCurrentPage(PageRoutes.GAME) && PageRouteTracker.getCurrentGameMode() === 'timed') {
-            const timedSettings = gameRepository.getSettings();
-            gameRepository.setTimedSessionBackgroundPaused(timedSettings.timedBackgroundPolicy === 'pause');
-            if (timedSettings.timedBackgroundPolicy === 'log-only') {
-              gameRepository.markTimedSessionBackgroundStarted(new Date().getTime());
-              pendingGameBanner = 'Returned to the foreground. Timed countdown was adjusted for time spent away.';
-            } else {
-              pendingGameBanner = 'Returned to the foreground. Timed countdown was paused while you were away.';
+            // Show remaining lives if the game is not over
+            if (!globalMessageStore.isGameOver) {
+              console.info(`Remaining Lives: ${globalMessageStore.userLives}`);
             }
+            break;
           }
+          case window.WindowStageEventType.HIDDEN: {
+            // Application is now in the background
+            globalMessageStore.message = '🔒 Application is in background';
+            LifecycleLog.add('background', globalMessageStore.message);
+            const backgroundBanner = this.backgroundPolicyBanner();
+            this.showLifecycleBanner(backgroundBanner);
+            let pendingGameBanner = PageRouteTracker.isCurrentPage(PageRoutes.GAME) ? backgroundBanner : '';
 
-          if (this.shouldApplyBackgroundPenalty()) {
-            const backgroundPenaltySession = this.createBackgroundPenaltySession();
-            const penaltyMessage = this.backgroundPenaltyMessage(backgroundPenaltySession.lives - 1);
-            if (gameRepository.recordBackgroundPenalty(backgroundPenaltySession, penaltyMessage)) {
-              globalMessageStore.userLives = backgroundPenaltySession.lives;
-              globalMessageStore.isGameOver = backgroundPenaltySession.isGameOver;
-              pendingGameBanner = penaltyMessage;
-              hilog.info(DOMAIN, TAG, `Life lost! Remaining Lives: ${globalMessageStore.userLives}`);
-
-              // If lives are finished, end the game
-              if (globalMessageStore.userLives <= 0) {
-                globalMessageStore.message = penaltyMessage;
-                LifecycleLog.add('game-over', globalMessageStore.message);
-
-                hilog.info(DOMAIN, TAG, 'Game Over!');
+            if (PageRouteTracker.isCurrentPage(PageRoutes.GAME) && PageRouteTracker.getCurrentGameMode() === 'timed') {
+              const timedSettings = gameRepository.getSettings();
+              gameRepository.setTimedSessionBackgroundPaused(timedSettings.timedBackgroundPolicy === 'pause');
+              if (timedSettings.timedBackgroundPolicy === 'log-only') {
+                gameRepository.markTimedSessionBackgroundStarted(new Date().getTime());
+                pendingGameBanner = 'Returned to the foreground. Timed countdown was adjusted for time spent away.';
               } else {
-                hilog.info(DOMAIN, TAG, `App is in background. Remaining Lives: ${globalMessageStore.userLives}`);
+                pendingGameBanner = 'Returned to the foreground. Timed countdown was paused while you were away.';
               }
             }
+
+            if (this.shouldApplyBackgroundPenalty()) {
+              const backgroundPenaltySession = this.createBackgroundPenaltySession();
+              const penaltyMessage = this.backgroundPenaltyMessage(backgroundPenaltySession.lives - 1);
+              if (gameRepository.recordBackgroundPenalty(backgroundPenaltySession, penaltyMessage)) {
+                globalMessageStore.userLives = backgroundPenaltySession.lives;
+                globalMessageStore.isGameOver = backgroundPenaltySession.isGameOver;
+                pendingGameBanner = penaltyMessage;
+                hilog.info(DOMAIN, TAG, `Life lost! Remaining Lives: ${globalMessageStore.userLives}`);
+
+                // If lives are finished, end the game
+                if (globalMessageStore.userLives <= 0) {
+                  globalMessageStore.message = penaltyMessage;
+                  LifecycleLog.add('game-over', globalMessageStore.message);
+
+                  hilog.info(DOMAIN, TAG, 'Game Over!');
+                } else {
+                  hilog.info(DOMAIN, TAG, `App is in background. Remaining Lives: ${globalMessageStore.userLives}`);
+                }
+              }
+            }
+            if (pendingGameBanner !== '') {
+              gameRepository.setPendingLifecycleBanner(pendingGameBanner);
+            }
+            break;
           }
-          if (pendingGameBanner !== '') {
-            gameRepository.setPendingLifecycleBanner(pendingGameBanner);
-          }
-          break;
+          case window.WindowStageEventType.ACTIVE:
+            // Application is active
+            globalMessageStore.message = '✅ Application is active';
+            LifecycleLog.add('active', globalMessageStore.message);
+            break;
+          case window.WindowStageEventType.INACTIVE:
+            // Application lost focus
+            globalMessageStore.message = '⏸ Application is out of focus';
+            LifecycleLog.add('inactive', globalMessageStore.message);
+            break;
+          case window.WindowStageEventType.RESUMED:
+            // Application resumed interaction
+            globalMessageStore.message = '🟢 Application resumed interaction';
+            LifecycleLog.add('resumed', globalMessageStore.message);
+            break;
+          case window.WindowStageEventType.PAUSED:
+            // Application is not interacting
+            globalMessageStore.message = '🔇 Application is not interacting';
+            LifecycleLog.add('paused', globalMessageStore.message);
+            break;
         }
-        case window.WindowStageEventType.ACTIVE:
-          // Application is active
-          globalMessageStore.message = '✅ Application is active';
-          LifecycleLog.add('active', globalMessageStore.message);
-          break;
-        case window.WindowStageEventType.INACTIVE:
-          // Application lost focus
-          globalMessageStore.message = '⏸ Application is out of focus';
-          LifecycleLog.add('inactive', globalMessageStore.message);
-          break;
-        case window.WindowStageEventType.RESUMED:
-          // Application resumed interaction
-          globalMessageStore.message = '🟢 Application resumed interaction';
-          LifecycleLog.add('resumed', globalMessageStore.message);
-          break;
-        case window.WindowStageEventType.PAUSED:
-          // Application is not interacting
-          globalMessageStore.message = '🔇 Application is not interacting';
-          LifecycleLog.add('paused', globalMessageStore.message);
-          break;
-      }
       });
     } catch (error) {
       hilog.warn(DOMAIN, TAG, 'windowStage listener failed %{public}s', JSON.stringify(error));
@@ -184,9 +182,9 @@ export default class EntryAbility extends UIAbility {
   private shouldApplyBackgroundPenalty(): boolean {
     const settings = gameRepository.getSettings();
     return settings.backgroundPenaltyEnabled && settings.backgroundPolicy === 'penalize' &&
-      PageRouteTracker.isCurrentPage(PageRoutes.GAME) &&
+    PageRouteTracker.isCurrentPage(PageRoutes.GAME) &&
       PageRouteTracker.getCurrentGameMode() === 'classic' &&
-      gameRepository.hasActiveClassicSession() &&
+    gameRepository.hasActiveClassicSession() &&
       !globalMessageStore.isGameOver;
   }
 

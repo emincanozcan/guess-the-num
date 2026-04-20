@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@ohos/hypium';
+import { describe, expect, it } from '@ohos/hypium';
 import CommonConstants from '../main/ets/common/constants/CommonConstants';
 import { GameRepository } from '../main/ets/data/GameRepository';
 import { GameSessionState } from '../main/ets/game/models/GameSessionState';
@@ -205,7 +205,8 @@ export default function gameRepositoryTest() {
       repo.initialize();
 
       repo.setPendingLifecycleBanner('Returned to the foreground. Timed countdown was adjusted for time spent away.');
-      expect(repo.consumeLifecycleBanner()).assertEqual('Returned to the foreground. Timed countdown was adjusted for time spent away.');
+      expect(repo.consumeLifecycleBanner())
+        .assertEqual('Returned to the foreground. Timed countdown was adjusted for time spent away.');
       expect(repo.consumeLifecycleBanner()).assertEqual('');
 
       repo.markTimedSessionBackgroundStarted(1000);
@@ -407,8 +408,10 @@ export default function gameRepositoryTest() {
         }
       };
 
-      expect(repo.importFromBackup(JSON.parse(JSON.stringify(missingProfilePayload)) as GameRepositoryBackupPayload)).assertEqual(false);
-      expect(repo.importFromBackup(JSON.parse(JSON.stringify(missingSettingsPayload)) as GameRepositoryBackupPayload)).assertEqual(false);
+      expect(repo.importFromBackup(JSON.parse(JSON.stringify(missingProfilePayload)) as GameRepositoryBackupPayload))
+        .assertEqual(false);
+      expect(repo.importFromBackup(JSON.parse(JSON.stringify(missingSettingsPayload)) as GameRepositoryBackupPayload))
+        .assertEqual(false);
       expect(repo.getClassicLives()).assertEqual(2);
     });
   });
@@ -503,7 +506,8 @@ function createLastCompletedSessionSummary(): LastCompletedSessionSummary {
   };
 }
 
-function createClassicSnapshot(lives: number, score: number, streak: number, completedRounds: number, sequenceIndex: number,
+function createClassicSnapshot(lives: number, score: number, streak: number, completedRounds: number,
+  sequenceIndex: number,
   turnIndex: number, updatedAt: number, message: string): ClassicSessionSnapshot {
   return {
     mode: GameMode.CLASSIC,

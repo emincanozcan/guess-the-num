@@ -39,7 +39,6 @@ export class GameEngine {
     1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
     1, 2, 3, 4, 5, 1, 2, 3, 4, 5
   ];
-
   private readonly classicConfig: GameModeConfig;
   private readonly timedConfig: GameModeConfig;
   private readonly streakConfig: GameModeConfig;

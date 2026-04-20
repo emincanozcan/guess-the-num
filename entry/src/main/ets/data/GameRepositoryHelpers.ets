@@ -4,11 +4,11 @@ import {
   AchievementProgress,
   BackgroundPolicy,
   GameSettings,
+  LifecycleEntry,
   PlayerStats,
   ReminderScheduleStatus,
   SessionHistoryEntry,
-  TimedBackgroundPolicy,
-  LifecycleEntry
+  TimedBackgroundPolicy
 } from './models/GameRepositoryTypes';
 
 export function sanitizeLives(value: number | undefined): number {
@@ -81,7 +81,8 @@ export function copyStats(stats: PlayerStats): PlayerStats {
 export function createSettings(backgroundPenaltyEnabled: boolean, backgroundPolicy: BackgroundPolicy,
   timedBackgroundPolicy: TimedBackgroundPolicy, preferredMode: GameMode, keepLifecycleSnapshots: boolean,
   hapticsEnabled: boolean, dailyReminderEnabled: boolean, dailyReminderHour: number, dailyReminderMinute: number,
-  dailyReminderStatus: ReminderScheduleStatus, dailyReminderToken: string, dailyReminderUpdatedAt: number): GameSettings {
+  dailyReminderStatus: ReminderScheduleStatus, dailyReminderToken: string,
+  dailyReminderUpdatedAt: number): GameSettings {
   return {
     backgroundPenaltyEnabled: backgroundPenaltyEnabled,
     backgroundPolicy: backgroundPolicy,

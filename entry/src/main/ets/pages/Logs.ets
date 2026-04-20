@@ -17,26 +17,26 @@ export struct Logs {
     Column() {
       Scroll() {
         Column() {
-        Text('Logs')
-          .fontSize(18)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#B31252')
-        Text('Lifecycle events')
-          .fontSize(12)
-          .fontColor('#7A3654')
-          .opacity(0.75)
-          .margin({ top: 2, bottom: 8 })
-        if (this.entries.length === 0) {
-          Text('No lifecycle events yet.')
-            .fontSize(14)
+          Text('Logs')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#B31252')
+          Text('Lifecycle events')
+            .fontSize(12)
             .fontColor('#7A3654')
-            .textAlign(TextAlign.Center)
-            .width('100%')
-        } else {
-          ForEach(this.entries, (entry: LifecycleEntry) => {
-            LifecycleRow({ entry: entry }).margin({ bottom: 8 })
-          }, (entry: LifecycleEntry) => `${entry.capturedAt}-${entry.stage}`)
-        }
+            .opacity(0.75)
+            .margin({ top: 2, bottom: 8 })
+          if (this.entries.length === 0) {
+            Text('No lifecycle events yet.')
+              .fontSize(14)
+              .fontColor('#7A3654')
+              .textAlign(TextAlign.Center)
+              .width('100%')
+          } else {
+            ForEach(this.entries, (entry: LifecycleEntry) => {
+              LifecycleRow({ entry: entry }).margin({ bottom: 8 })
+            }, (entry: LifecycleEntry) => `${entry.capturedAt}-${entry.stage}`)
+          }
         }
         .width('100%')
         .padding({ bottom: 16 })

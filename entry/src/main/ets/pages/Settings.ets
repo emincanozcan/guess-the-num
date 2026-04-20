@@ -34,6 +34,219 @@ export struct Settings {
     this.reminderStatusMessage = this.buildReminderStatusMessage();
   }
 
+  build() {
+    Column() {
+      Scroll() {
+        Column() {
+          Text('Settings')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#B31252')
+
+          Text('Game behavior + reminders')
+            .fontSize(12)
+            .opacity(0.75)
+            .margin({ top: 2, bottom: 8 })
+            .fontColor('#B31252')
+          Text('Background policy')
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#B31252')
+          Row() {
+            Button('Cost a life')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#E58A2B')
+              .borderRadius(16)
+              .onClick(() => {
+                this.backgroundPolicy = 'penalize';
+                this.backgroundPenaltyEnabled = true;
+                this.updateSettings();
+              })
+            Button('Log only')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#7A3654')
+              .backgroundColor('#FFF7FB')
+              .borderRadius(16)
+              .margin({ left: 8 })
+              .onClick(() => {
+                this.backgroundPolicy = 'log-only';
+                this.backgroundPenaltyEnabled = false;
+                this.updateSettings();
+              })
+          }.width('100%').margin({ top: 8 })
+
+          Text(`Current: ${this.policyLabel()}`)
+            .fontSize(12)
+            .opacity(0.7)
+            .margin({ top: 4, bottom: 12 })
+            .fontColor('#B31252')
+
+          Text('Timed session background')
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#B31252')
+          Row() {
+            Button('Pause timer')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#D96C8B')
+              .borderRadius(16)
+              .onClick(() => {
+                this.timedBackgroundPolicy = 'pause';
+                this.updateSettings();
+              })
+            Button('Log only')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#7A3654')
+              .backgroundColor('#FFF7FB')
+              .borderRadius(16)
+              .margin({ left: 8 })
+              .onClick(() => {
+                this.timedBackgroundPolicy = 'log-only';
+                this.updateSettings();
+              })
+          }.width('100%').margin({ top: 8 })
+
+          Text(`Current: ${this.timedPolicyLabel()}`)
+            .fontSize(12)
+            .opacity(0.7)
+            .margin({ top: 4, bottom: 12 })
+            .fontColor('#B31252')
+
+          Row() {
+            Text('Keep lifecycle snapshots').layoutWeight(1)
+              .fontColor('#B31252')
+            Button(this.keepSnapshots ? 'On' : 'Off')
+              .height(30)
+              .fontSize(12)
+              .fontColor('#FFFFFF')
+              .backgroundColor(this.keepSnapshots ? '#C84D7C' : '#D8B89C')
+              .borderRadius(15)
+              .onClick(() => {
+                this.keepSnapshots = !this.keepSnapshots;
+                this.updateSettings();
+              })
+          }.width('100%').margin({ bottom: 8 })
+
+          Row() {
+            Text('Haptics').layoutWeight(1)
+              .fontColor('#B31252')
+
+            Button(this.hapticsEnabled ? 'On' : 'Off')
+              .height(30)
+              .fontSize(12)
+              .fontColor('#FFFFFF')
+              .backgroundColor(this.hapticsEnabled ? '#C84D7C' : '#D8B89C')
+              .borderRadius(15)
+              .onClick(() => {
+                this.hapticsEnabled = !this.hapticsEnabled;
+                this.updateSettings();
+              })
+          }.width('100%').margin({ bottom: 12 })
+
+          Text('Daily reminder')
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#B31252')
+
+          Row() {
+            Button('-1h')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#7A3654')
+              .backgroundColor('#FFF7FB')
+              .borderRadius(16)
+              .onClick(() => this.adjustReminderHour(-1))
+            Text(this.timeLabel()).layoutWeight(1).textAlign(TextAlign.Center).fontColor('#B31252')
+            Button('+1h')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#7A3654')
+              .backgroundColor('#FFF7FB')
+              .borderRadius(16)
+              .onClick(() => this.adjustReminderHour(1))
+          }.width('100%').margin({ top: 8 })
+
+          Row() {
+            Button('-15m')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#7A3654')
+              .backgroundColor('#FFF7FB')
+              .borderRadius(16)
+              .onClick(() => this.adjustReminderMinute(-15))
+            Text(' ').layoutWeight(1)
+            Button('+15m')
+              .layoutWeight(1)
+              .height(32)
+              .fontSize(12)
+              .fontColor('#7A3654')
+              .backgroundColor('#FFF7FB')
+              .borderRadius(16)
+              .onClick(() => this.adjustReminderMinute(15))
+          }.width('100%').margin({ top: 6 })
+
+          Row() {
+            Button('Schedule')
+              .layoutWeight(1)
+              .height(34)
+              .fontSize(13)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#E58A2B')
+              .borderRadius(17)
+              .onClick(() => {
+                void this.scheduleReminder();
+              })
+            Button('Cancel')
+              .layoutWeight(1)
+              .height(34)
+              .fontSize(13)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#D96C8B')
+              .borderRadius(17)
+              .margin({ left: 8 })
+              .onClick(() => {
+                void this.cancelReminder();
+              })
+          }.width('100%').margin({ top: 8, bottom: 6 })
+
+          Text(this.reminderStatusMessage)
+            .fontSize(12)
+            .opacity(0.75)
+            .width('100%')
+            .margin({ bottom: 8 })
+            .fontColor('#B31252')
+
+          Text('Classic can cost a life. Timed can pause or just log backgrounding.')
+            .fontSize(12)
+            .opacity(0.75)
+            .width('100%')
+            .fontColor('#B31252')
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+    }
+    .width('100%')
+    .height('100%')
+    .padding(12)
+    .backgroundColor('#FFE6F2')
+  }
+
   private updateSettings() {
     gameRepository.updateSettings({
       backgroundPolicy: this.backgroundPolicy as 'penalize' | 'log-only',
@@ -138,109 +351,5 @@ export struct Settings {
     this.reminderStatus = operation.status;
     this.reminderStatusMessage = operation.message;
     this.updateSettings();
-  }
-
-  build() {
-    Column() {
-      Scroll() {
-        Column() {
-          Text('Settings')
-            .fontSize(18)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#B31252')
-
-          Text('Game behavior + reminders')
-            .fontSize(12)
-            .opacity(0.75)
-            .margin({ top: 2, bottom: 8 })
-            .fontColor('#B31252')
-          Text('Background policy')
-            .fontSize(13)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#B31252')
-          Row() {
-            Button('Cost a life').layoutWeight(1).height(32).fontSize(12).fontColor('#FFFFFF').backgroundColor('#E58A2B').borderRadius(16).onClick(() => { this.backgroundPolicy = 'penalize'; this.backgroundPenaltyEnabled = true; this.updateSettings(); })
-            Button('Log only').layoutWeight(1).height(32).fontSize(12).fontColor('#7A3654').backgroundColor('#FFF7FB').borderRadius(16).margin({ left: 8 }).onClick(() => { this.backgroundPolicy = 'log-only'; this.backgroundPenaltyEnabled = false; this.updateSettings(); })
-          }.width('100%').margin({ top: 8 })
-
-          Text(`Current: ${this.policyLabel()}`)
-            .fontSize(12)
-            .opacity(0.7)
-            .margin({ top: 4, bottom: 12 })
-            .fontColor('#B31252')
-
-          Text('Timed session background')
-            .fontSize(13)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#B31252')
-          Row() {
-            Button('Pause timer').layoutWeight(1).height(32).fontSize(12).fontColor('#FFFFFF').backgroundColor('#D96C8B').borderRadius(16).onClick(() => { this.timedBackgroundPolicy = 'pause'; this.updateSettings(); })
-            Button('Log only').layoutWeight(1).height(32).fontSize(12).fontColor('#7A3654').backgroundColor('#FFF7FB').borderRadius(16).margin({ left: 8 }).onClick(() => { this.timedBackgroundPolicy = 'log-only'; this.updateSettings(); })
-          }.width('100%').margin({ top: 8 })
-
-          Text(`Current: ${this.timedPolicyLabel()}`)
-            .fontSize(12)
-            .opacity(0.7)
-            .margin({ top: 4, bottom: 12 })
-            .fontColor('#B31252')
-
-          Row() {
-            Text('Keep lifecycle snapshots').layoutWeight(1)
-              .fontColor('#B31252')
-            Button(this.keepSnapshots ? 'On' : 'Off').height(30).fontSize(12).fontColor('#FFFFFF').backgroundColor(this.keepSnapshots ? '#C84D7C' : '#D8B89C').borderRadius(15).onClick(() => { this.keepSnapshots = !this.keepSnapshots; this.updateSettings(); })
-          }.width('100%').margin({ bottom: 8 })
-
-          Row() {
-            Text('Haptics').layoutWeight(1)
-              .fontColor('#B31252')
-
-            Button(this.hapticsEnabled ? 'On' : 'Off').height(30).fontSize(12).fontColor('#FFFFFF').backgroundColor(this.hapticsEnabled ? '#C84D7C' : '#D8B89C').borderRadius(15).onClick(() => {
-              this.hapticsEnabled = !this.hapticsEnabled;
-              this.updateSettings();
-            })
-          }.width('100%').margin({ bottom: 12 })
-
-          Text('Daily reminder')
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#B31252')
-
-          Row() {
-            Button('-1h').layoutWeight(1).height(32).fontSize(12).fontColor('#7A3654').backgroundColor('#FFF7FB').borderRadius(16).onClick(() => this.adjustReminderHour(-1))
-            Text(this.timeLabel()).layoutWeight(1).textAlign(TextAlign.Center).fontColor('#B31252')
-            Button('+1h').layoutWeight(1).height(32).fontSize(12).fontColor('#7A3654').backgroundColor('#FFF7FB').borderRadius(16).onClick(() => this.adjustReminderHour(1))
-          }.width('100%').margin({ top: 8 })
-          Row() {
-            Button('-15m').layoutWeight(1).height(32).fontSize(12).fontColor('#7A3654').backgroundColor('#FFF7FB').borderRadius(16).onClick(() => this.adjustReminderMinute(-15))
-            Text(' ').layoutWeight(1)
-            Button('+15m').layoutWeight(1).height(32).fontSize(12).fontColor('#7A3654').backgroundColor('#FFF7FB').borderRadius(16).onClick(() => this.adjustReminderMinute(15))
-          }.width('100%').margin({ top: 6 })
-          Row() {
-            Button('Schedule').layoutWeight(1).height(34).fontSize(13).fontColor('#FFFFFF').backgroundColor('#E58A2B').borderRadius(17).onClick(() => { void this.scheduleReminder(); })
-            Button('Cancel').layoutWeight(1).height(34).fontSize(13).fontColor('#FFFFFF').backgroundColor('#D96C8B').borderRadius(17).margin({ left: 8 }).onClick(() => { void this.cancelReminder(); })
-          }.width('100%').margin({ top: 8, bottom: 6 })
-          Text(this.reminderStatusMessage)
-            .fontSize(12)
-            .opacity(0.75)
-            .width('100%')
-            .margin({ bottom: 8 })
-            .fontColor('#B31252')
-
-          Text('Classic can cost a life. Timed can pause or just log backgrounding.')
-            .fontSize(12)
-            .opacity(0.75)
-            .width('100%')
-            .fontColor('#B31252')
-        }
-        .width('100%')
-      }
-      .width('100%')
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
-    }
-    .width('100%')
-    .height('100%')
-    .padding(12)
-    .backgroundColor('#FFE6F2')
   }
 }

@@ -4,11 +4,6 @@ import { LifecycleEntry } from '../../data/models/GameRepositoryTypes';
 export struct LifecycleRow {
   entry: LifecycleEntry = { capturedAt: 0, stage: '', message: '' };
 
-  private formatTime(value: number): string {
-    const date = new Date(value);
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-  }
-
   build() {
     Column() {
       Row() {
@@ -26,5 +21,10 @@ export struct LifecycleRow {
     .width('100%')
     .borderRadius(12)
     .backgroundColor('#FFF7FB')
+  }
+
+  private formatTime(value: number): string {
+    const date = new Date(value);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
   }
 }

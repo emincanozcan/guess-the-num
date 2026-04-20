@@ -12,6 +12,7 @@ export interface ReminderOperationResult {
 
 export interface ReminderDriver {
   scheduleDaily?(hour: number, minute: number, message: string): Promise<string | undefined>;
+
   cancelDaily?(reminderToken?: string): Promise<void>;
 }
 

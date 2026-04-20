@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@ohos/hypium';
+import { describe, expect, it } from '@ohos/hypium';
 import { GameMode } from '../main/ets/game/models/GameMode';
 import { GameEngine } from '../main/ets/game/services/GameEngine';
 
@@ -25,7 +25,8 @@ export default function gameEngineTest() {
       expect(wrongResult.nextRound !== undefined).assertEqual(true);
 
       if (wrongResult.nextRound) {
-        const correctResult = engine.submitGuess(bundle.session, wrongResult.nextRound, wrongResult.nextRound.secretNumber);
+        const correctResult =
+          engine.submitGuess(bundle.session, wrongResult.nextRound, wrongResult.nextRound.secretNumber);
         expect(bundle.session.streak).assertEqual(1);
         expect(bundle.session.correctCount).assertEqual(1);
         expect(correctResult.isCorrect).assertEqual(true);

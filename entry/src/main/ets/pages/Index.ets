@@ -19,6 +19,17 @@ struct Index {
     AppNavigator.setPathStack(this.pathStack);
   }
 
+  build() {
+    Navigation(this.pathStack) {
+    }
+    .mode(NavigationMode.Stack)
+    .hideNavBar(true)
+    .navDestination(this.pageMap)
+    .onAppear(() => this.seedInitialRoute())
+    .width('100%')
+    .height('100%')
+  }
+
   @Builder
   private pageMap(name: string) {
     if (name === PageRoutes.HOME) {
@@ -42,15 +53,5 @@ struct Index {
     if (this.pathStack.size() === 0) {
       this.pathStack.pushPath({ name: PageRoutes.HOME });
     }
-  }
-
-  build() {
-    Navigation(this.pathStack) {}
-    .mode(NavigationMode.Stack)
-    .hideNavBar(true)
-    .navDestination(this.pageMap)
-    .onAppear(() => this.seedInitialRoute())
-    .width('100%')
-    .height('100%')
   }
 }

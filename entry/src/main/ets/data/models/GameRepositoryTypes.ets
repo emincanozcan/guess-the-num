@@ -50,7 +50,9 @@ export interface GameSettingsUpdate {
 }
 
 export type BackgroundPolicy = 'penalize' | 'log-only';
+
 export type TimedBackgroundPolicy = 'pause' | 'log-only';
+
 export type ReminderScheduleStatus = 'idle' | 'scheduled' | 'cancelled' | 'unsupported' | 'failed';
 
 export interface PlayerStats {

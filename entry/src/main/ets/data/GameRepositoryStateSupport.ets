@@ -52,12 +52,15 @@ export abstract class GameRepositoryStateSupport {
       sanitizeCount(state?.profile?.stats?.totalSessions), sanitizeCount(state?.profile?.stats?.completedSessions),
       sanitizeCount(state?.profile?.stats?.totalCorrect), sanitizeCount(state?.profile?.stats?.totalWrong),
       sanitizeCount(state?.profile?.stats?.bestScore), sanitizeCount(state?.profile?.stats?.bestStreak),
-      sanitizeCount(state?.profile?.stats?.longestRun), sanitizeCount(state?.profile?.stats?.longestStreak ?? state?.profile?.stats?.bestStreak),
+      sanitizeCount(state?.profile?.stats?.longestRun),
+      sanitizeCount(state?.profile?.stats?.longestStreak ?? state?.profile?.stats?.bestStreak),
       sanitizeCount(state?.profile?.stats?.bestTimedScore), sanitizeCount(state?.profile?.stats?.backgroundPenalties),
       sanitizeCount(state?.profile?.stats?.backgroundLosses), sanitizeCount(state?.profile?.stats?.lastPlayedAt)
     );
-    normalized.profile.lastSession = this.normalizeSessionSnapshot(state?.profile?.lastSession, normalized.profile.lives, normalized.profile.gameOver);
-    normalized.profile.lastCompletedSession = this.normalizeCompletedSessionSummary(state?.profile?.lastCompletedSession);
+    normalized.profile.lastSession =
+      this.normalizeSessionSnapshot(state?.profile?.lastSession, normalized.profile.lives, normalized.profile.gameOver);
+    normalized.profile.lastCompletedSession =
+      this.normalizeCompletedSessionSummary(state?.profile?.lastCompletedSession);
     normalized.settings = this.normalizeSettings(state?.settings);
     normalized.history = this.normalizeHistory(state?.history);
     normalized.achievements = this.normalizeAchievements(state?.achievements, normalized.profile.stats);
@@ -148,7 +151,8 @@ export abstract class GameRepositoryStateSupport {
     };
   }
 
-  protected touchAchievementProgress(state: DurableGameRepositoryState, session: GameSessionState, result?: GameResult): void {
+  protected touchAchievementProgress(state: DurableGameRepositoryState, session: GameSessionState,
+    result?: GameResult): void {
     state.achievements = this.applyAchievementProgress(state.achievements, state.profile.stats);
     if (result) {
       state.profile.stats.bestScore = Math.max(state.profile.stats.bestScore, result.finalScore);
@@ -197,24 +201,6 @@ export abstract class GameRepositoryStateSupport {
     return `session-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   }
 
-  private normalizeSettings(settings?: GameSettings): GameSettings {
-    const defaults = this.createDefaultState().settings;
-    return {
-      backgroundPenaltyEnabled: settings?.backgroundPenaltyEnabled ?? defaults.backgroundPenaltyEnabled,
-      backgroundPolicy: settings?.backgroundPolicy ?? defaults.backgroundPolicy,
-      timedBackgroundPolicy: settings?.timedBackgroundPolicy ?? defaults.timedBackgroundPolicy,
-      preferredMode: settings?.preferredMode ?? defaults.preferredMode,
-      keepLifecycleSnapshots: settings?.keepLifecycleSnapshots ?? defaults.keepLifecycleSnapshots,
-      hapticsEnabled: settings?.hapticsEnabled ?? defaults.hapticsEnabled,
-      dailyReminderEnabled: settings?.dailyReminderEnabled ?? defaults.dailyReminderEnabled,
-      dailyReminderHour: sanitizeHour(settings?.dailyReminderHour ?? defaults.dailyReminderHour),
-      dailyReminderMinute: sanitizeMinute(settings?.dailyReminderMinute ?? defaults.dailyReminderMinute),
-      dailyReminderStatus: sanitizeReminderStatus(settings?.dailyReminderStatus ?? defaults.dailyReminderStatus),
-      dailyReminderToken: sanitizeReminderToken(settings?.dailyReminderToken ?? defaults.dailyReminderToken),
-      dailyReminderUpdatedAt: sanitizeCount(settings?.dailyReminderUpdatedAt ?? defaults.dailyReminderUpdatedAt)
-    };
-  }
-
   protected normalizeHistory(history?: SessionHistoryEntry[]): SessionHistoryEntry[] {
     const result: SessionHistoryEntry[] = [];
     if (!history) {
@@ -232,12 +218,54 @@ export abstract class GameRepositoryStateSupport {
     return result;
   }
 
-  protected normalizeAchievements(achievements: AchievementProgress[] | undefined, stats: PlayerStats): AchievementProgress[] {
+  protected normalizeAchievements(achievements: AchievementProgress[] | undefined,
+    stats: PlayerStats): AchievementProgress[] {
     const defaults = createDefaultAchievements();
     if (!achievements || achievements.length === 0) {
       return this.applyAchievementProgress(defaults, stats);
     }
     return this.applyAchievementProgress(achievements, stats);
+  }
+
+  protected normalizeSessionSnapshot(snapshot: ClassicSessionSnapshot | undefined, lives: number,
+    gameOver: boolean): ClassicSessionSnapshot {
+    const message = this.normalizeProgressMessage(snapshot?.message ?? '', gameOver);
+    return {
+      mode: snapshot?.mode ?? GameMode.CLASSIC,
+      lives: sanitizeLives(snapshot?.lives ?? lives),
+      gameOver: snapshot?.gameOver ?? gameOver,
+      score: sanitizeCount(snapshot?.score),
+      streak: sanitizeCount(snapshot?.streak),
+      bestStreak: sanitizeCount(snapshot?.bestStreak),
+      correctCount: sanitizeCount(snapshot?.correctCount),
+      wrongCount: sanitizeCount(snapshot?.wrongCount),
+      completedRounds: sanitizeCount(snapshot?.completedRounds),
+      sequenceIndex: sanitizeCount(snapshot?.sequenceIndex),
+      turnIndex: sanitizeCount(snapshot?.turnIndex),
+      roundDelayMs: sanitizeCount(snapshot?.roundDelayMs ?? CommonConstants.DEFAULT_ROUND_DELAY_MS),
+      timeLimitMs: sanitizeCount(snapshot?.timeLimitMs),
+      remainingTimeMs: sanitizeCount(snapshot?.remainingTimeMs),
+      updatedAt: sanitizeCount(snapshot?.updatedAt),
+      message
+    };
+  }
+
+  private normalizeSettings(settings?: GameSettings): GameSettings {
+    const defaults = this.createDefaultState().settings;
+    return {
+      backgroundPenaltyEnabled: settings?.backgroundPenaltyEnabled ?? defaults.backgroundPenaltyEnabled,
+      backgroundPolicy: settings?.backgroundPolicy ?? defaults.backgroundPolicy,
+      timedBackgroundPolicy: settings?.timedBackgroundPolicy ?? defaults.timedBackgroundPolicy,
+      preferredMode: settings?.preferredMode ?? defaults.preferredMode,
+      keepLifecycleSnapshots: settings?.keepLifecycleSnapshots ?? defaults.keepLifecycleSnapshots,
+      hapticsEnabled: settings?.hapticsEnabled ?? defaults.hapticsEnabled,
+      dailyReminderEnabled: settings?.dailyReminderEnabled ?? defaults.dailyReminderEnabled,
+      dailyReminderHour: sanitizeHour(settings?.dailyReminderHour ?? defaults.dailyReminderHour),
+      dailyReminderMinute: sanitizeMinute(settings?.dailyReminderMinute ?? defaults.dailyReminderMinute),
+      dailyReminderStatus: sanitizeReminderStatus(settings?.dailyReminderStatus ?? defaults.dailyReminderStatus),
+      dailyReminderToken: sanitizeReminderToken(settings?.dailyReminderToken ?? defaults.dailyReminderToken),
+      dailyReminderUpdatedAt: sanitizeCount(settings?.dailyReminderUpdatedAt ?? defaults.dailyReminderUpdatedAt)
+    };
   }
 
   private applyAchievementProgress(achievements: AchievementProgress[], stats: PlayerStats): AchievementProgress[] {
@@ -259,7 +287,10 @@ export abstract class GameRepositoryStateSupport {
       return result;
     }
     for (const snapshot of snapshots) {
-      result.push({ capturedAt: sanitizeCount(snapshot?.capturedAt), entries: this.normalizeLifecycleEntries(snapshot?.entries) });
+      result.push({
+        capturedAt: sanitizeCount(snapshot?.capturedAt),
+        entries: this.normalizeLifecycleEntries(snapshot?.entries)
+      });
     }
     return result;
   }
@@ -269,27 +300,5 @@ export abstract class GameRepositoryStateSupport {
       return copyLifecycleEntries(entries);
     }
     return [];
-  }
-
-  protected normalizeSessionSnapshot(snapshot: ClassicSessionSnapshot | undefined, lives: number, gameOver: boolean): ClassicSessionSnapshot {
-    const message = this.normalizeProgressMessage(snapshot?.message ?? '', gameOver);
-    return {
-      mode: snapshot?.mode ?? GameMode.CLASSIC,
-      lives: sanitizeLives(snapshot?.lives ?? lives),
-      gameOver: snapshot?.gameOver ?? gameOver,
-      score: sanitizeCount(snapshot?.score),
-      streak: sanitizeCount(snapshot?.streak),
-      bestStreak: sanitizeCount(snapshot?.bestStreak),
-      correctCount: sanitizeCount(snapshot?.correctCount),
-      wrongCount: sanitizeCount(snapshot?.wrongCount),
-      completedRounds: sanitizeCount(snapshot?.completedRounds),
-      sequenceIndex: sanitizeCount(snapshot?.sequenceIndex),
-      turnIndex: sanitizeCount(snapshot?.turnIndex),
-      roundDelayMs: sanitizeCount(snapshot?.roundDelayMs ?? CommonConstants.DEFAULT_ROUND_DELAY_MS),
-      timeLimitMs: sanitizeCount(snapshot?.timeLimitMs),
-      remainingTimeMs: sanitizeCount(snapshot?.remainingTimeMs),
-      updatedAt: sanitizeCount(snapshot?.updatedAt),
-      message
-    };
   }
 }

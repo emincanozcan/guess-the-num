@@ -22,34 +22,6 @@ export struct Home {
     this.refreshDashboard();
   }
 
-  private refreshDashboard() {
-    const stats = gameRepository.getStats();
-    const lastSession = gameRepository.getLastSession();
-
-    this.welcomeText = 'Ready for a round?';
-    this.profileText = `❤️ ${gameRepository.getClassicLives()}  Best ${stats.bestScore}  Streak ${stats.bestStreak}`;
-    this.sessionText = lastSession.updatedAt > 0
-      ? `${lastSession.mode.toUpperCase()} • Score ${lastSession.score}`
-      : 'No session yet';
-    this.quickResumeEnabled = gameRepository.hasActiveClassicSession() && !lastSession.gameOver;
-    this.quickResumeText = this.quickResumeEnabled ? 'Resume classic session' : 'Resume classic session';
-  }
-
-  private open(route: string): void {
-    AppNavigator.push(route);
-  }
-
-  private startMode(mode: GameMode, resumeClassic: boolean = false): void {
-    const params: GameNavigationParams = new GameNavigationParams();
-    params.mode = mode;
-    if (resumeClassic) {
-      params.resumeClassic = 'true';
-      AppNavigator.push(PageRoutes.GAME, params);
-      return;
-    }
-    AppNavigator.push(PageRoutes.GAME, params);
-  }
-
   build() {
     Column() {
       Scroll() {
@@ -90,7 +62,9 @@ export struct Home {
             .backgroundColor(this.quickResumeEnabled ? '#E58A2B' : '#D8B89C')
             .borderRadius(18)
             .enabled(this.quickResumeEnabled)
-            .onClick(() => { this.startMode(GameMode.CLASSIC, true); })
+            .onClick(() => {
+              this.startMode(GameMode.CLASSIC, true);
+            })
 
           Text('Challenges')
             .fontSize(15)
@@ -107,7 +81,9 @@ export struct Home {
             .backgroundColor('#E58A2B')
             .borderRadius(17)
             .margin({ bottom: 8 })
-            .onClick(() => { this.startMode(GameMode.CLASSIC); })
+            .onClick(() => {
+              this.startMode(GameMode.CLASSIC);
+            })
 
           Button('Timed')
             .width('100%')
@@ -117,7 +93,9 @@ export struct Home {
             .backgroundColor('#D96C8B')
             .borderRadius(17)
             .margin({ bottom: 8 })
-            .onClick(() => { this.startMode(GameMode.TIMED); })
+            .onClick(() => {
+              this.startMode(GameMode.TIMED);
+            })
 
           Button('Streak')
             .width('100%')
@@ -126,7 +104,9 @@ export struct Home {
             .fontColor('#FFFFFF')
             .backgroundColor('#C84D7C')
             .borderRadius(17)
-            .onClick(() => { this.startMode(GameMode.STREAK); })
+            .onClick(() => {
+              this.startMode(GameMode.STREAK);
+            })
 
           Column() {
             Button('Stats')
@@ -137,7 +117,9 @@ export struct Home {
               .backgroundColor('#FFF7FB')
               .borderRadius(16)
               .margin({ top: 10 })
-              .onClick(() => { this.open(PageRoutes.STATS); })
+              .onClick(() => {
+                this.open(PageRoutes.STATS);
+              })
 
             Button('History')
               .width('100%')
@@ -147,7 +129,9 @@ export struct Home {
               .backgroundColor('#FFF7FB')
               .borderRadius(16)
               .margin({ top: 8 })
-              .onClick(() => { this.open(PageRoutes.HISTORY); })
+              .onClick(() => {
+                this.open(PageRoutes.HISTORY);
+              })
           }
 
           Button('Settings')
@@ -158,7 +142,9 @@ export struct Home {
             .backgroundColor('#FFF7FB')
             .borderRadius(16)
             .margin({ top: 8 })
-            .onClick(() => { this.open(PageRoutes.SETTINGS); })
+            .onClick(() => {
+              this.open(PageRoutes.SETTINGS);
+            })
         }
         .width('100%')
         .alignItems(HorizontalAlign.Center)
@@ -173,5 +159,33 @@ export struct Home {
     .height('100%')
     .padding(12)
     .backgroundColor('#FFE6F2')
+  }
+
+  private refreshDashboard() {
+    const stats = gameRepository.getStats();
+    const lastSession = gameRepository.getLastSession();
+
+    this.welcomeText = 'Ready for a round?';
+    this.profileText = `❤️ ${gameRepository.getClassicLives()}  Best ${stats.bestScore}  Streak ${stats.bestStreak}`;
+    this.sessionText = lastSession.updatedAt > 0
+      ? `${lastSession.mode.toUpperCase()} • Score ${lastSession.score}`
+      : 'No session yet';
+    this.quickResumeEnabled = gameRepository.hasActiveClassicSession() && !lastSession.gameOver;
+    this.quickResumeText = this.quickResumeEnabled ? 'Resume classic session' : 'Resume classic session';
+  }
+
+  private open(route: string): void {
+    AppNavigator.push(route);
+  }
+
+  private startMode(mode: GameMode, resumeClassic: boolean = false): void {
+    const params: GameNavigationParams = new GameNavigationParams();
+    params.mode = mode;
+    if (resumeClassic) {
+      params.resumeClassic = 'true';
+      AppNavigator.push(PageRoutes.GAME, params);
+      return;
+    }
+    AppNavigator.push(PageRoutes.GAME, params);
   }
 }

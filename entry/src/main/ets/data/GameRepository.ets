@@ -7,8 +7,6 @@ import {
   copyLifecycleEntries,
   copySettings,
   copyStats,
-  createHistoryEntry,
-  createLifecycleEntry,
   sanitizeCount,
   sanitizeHour,
   sanitizeLives,
@@ -21,18 +19,17 @@ import { readDurableState, tryParseDurableState, writeDurableState } from './Gam
 import {
   AchievementProgress,
   ClassicSessionSnapshot,
-  DurableGameRepositoryState,
   DurableBackupRepositoryState,
-  GameSettings,
+  DurableGameRepositoryState,
   GameRepositoryBackupPayload,
+  GameSettings,
   GameSettingsUpdate,
+  LastCompletedSessionSummary,
   LifecycleEntry,
   LifecycleSnapshot,
   PlayerStats,
   ReminderScheduleStatus,
-  SessionHistoryEntry,
-  LastCompletedSessionSummary,
-  TimedBackgroundPolicy
+  SessionHistoryEntry
 } from './models/GameRepositoryTypes';
 
 const DEFAULT_STATE_KEY = 'guess_the_num_repository_state';
@@ -46,7 +43,6 @@ export class GameRepository extends GameRepositoryStateSupport {
   static readonly SCHEMA_VERSION = GameRepositoryStateSupport.SCHEMA_VERSION;
   private static readonly MAX_HISTORY = CommonConstants.MAX_LOGS;
   private static readonly MAX_SNAPSHOTS = CommonConstants.MAX_LOGS;
-
   private initialized = false;
   private storageDir: string = '';
   private storageFilePath: string = '';
@@ -109,10 +105,12 @@ export class GameRepository extends GameRepositoryStateSupport {
         this.cachedState = normalizedState;
         AppStorage.set<string>(DEFAULT_STATE_KEY, JSON.stringify(normalizedState));
         this.mirrorClassicState(normalizedState.profile.lives, normalizedState.profile.gameOver);
-        hilog.info(DOMAIN, TAG, 'configureStorage restored durable state history=%{public}d', normalizedState.history.length);
+        hilog.info(DOMAIN, TAG, 'configureStorage restored durable state history=%{public}d',
+          normalizedState.history.length);
         return;
       }
-      hilog.info(DOMAIN, TAG, 'configureStorage found no durable snapshot, flushing cache history=%{public}d', this.cachedState.history.length);
+      hilog.info(DOMAIN, TAG, 'configureStorage found no durable snapshot, flushing cache history=%{public}d',
+        this.cachedState.history.length);
       this.writeDurableState(JSON.stringify(this.cachedState));
     }
   }
@@ -189,7 +187,8 @@ export class GameRepository extends GameRepositoryStateSupport {
     state.profile.lives = this.sanitizeLives(session.lives);
     state.profile.gameOver = session.isGameOver;
     state.profile.classicSessionActive = !session.isGameOver;
-    state.profile.lastSession = this.buildSessionSnapshot(session, this.normalizeProgressMessage(message, session.isGameOver));
+    state.profile.lastSession =
+      this.buildSessionSnapshot(session, this.normalizeProgressMessage(message, session.isGameOver));
     state.profile.stats.lastPlayedAt = this.now();
     this.touchAchievementProgress(state, session);
     this.writeState(state);
@@ -218,7 +217,8 @@ export class GameRepository extends GameRepositoryStateSupport {
     }
     state.profile.stats.lastPlayedAt = this.now();
     state.history.push(this.buildHistoryEntry(result, session, message));
-    hilog.info(DOMAIN, TAG, 'recordCompletedSession pushed history item, history=%{public}d mode=%{public}s score=%{public}d',
+    hilog.info(DOMAIN, TAG,
+      'recordCompletedSession pushed history item, history=%{public}d mode=%{public}s score=%{public}d',
       state.history.length, result.mode, result.finalScore);
     if (state.history.length > GameRepository.MAX_HISTORY) {
       state.history.shift();
@@ -453,8 +453,8 @@ export class GameRepository extends GameRepositoryStateSupport {
       !!repository.profile.lastSession &&
       !!repository.profile.lastCompletedSession &&
       !!repository.settings &&
-      Array.isArray(repository.history) &&
-      Array.isArray(repository.achievements);
+    Array.isArray(repository.history) &&
+    Array.isArray(repository.achievements);
   }
 
   private getProfile() {
@@ -474,7 +474,8 @@ export class GameRepository extends GameRepositoryStateSupport {
         classicSessionActive: state.profile.classicSessionActive,
         onboardingCompleted: state.profile.onboardingCompleted,
         stats: copyStats(state.profile.stats),
-        lastSession: this.normalizeSessionSnapshot(state.profile.lastSession, state.profile.lives, state.profile.gameOver),
+        lastSession: this.normalizeSessionSnapshot(state.profile.lastSession, state.profile.lives,
+          state.profile.gameOver),
         lastCompletedSession: this.normalizeCompletedSessionSummary(state.profile.lastCompletedSession)
       },
       settings: {
@@ -554,7 +555,8 @@ export class GameRepository extends GameRepositoryStateSupport {
   }
 
 
-  private buildCompletedSessionSummary(session: GameSessionState, reason: GameResultReason, message: string): LastCompletedSessionSummary {
+  private buildCompletedSessionSummary(session: GameSessionState, reason: GameResultReason,
+    message: string): LastCompletedSessionSummary {
     return {
       sessionId: this.makeSessionId(),
       mode: session.mode,
